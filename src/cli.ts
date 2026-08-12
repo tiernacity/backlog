@@ -34,6 +34,7 @@ const INSTALL =
 const STORE = "backlog";
 const STORE_DIR = (state: string): string => `${STORE}/${state}/`;
 const STORE_TEMPLATE = (state: string): string => `${STORE}/.${state}.md`;
+const STORE_GITKEEP = (state: string): string => `${STORE}/${state}/.gitkeep`;
 
 const HEADLINE =
   `Use \`backlog\` for task workflow support. Manage an increment from todo → in-progress → done
@@ -161,6 +162,11 @@ function initCmd(): number {
   for (const state of [TODO, IN_PROGRESS, DONE]) {
     ensureDir(joinPath(root, state));
     out(`[ok] created ${STORE_DIR(state)}`);
+    const gk = STORE_GITKEEP(state);
+    if (!exists(gk)) {
+      writeText(gk, "");
+      out(`[ok] created ${gk} (keeps empty dir tracked)`);
+    }
   }
   for (const state of [TODO, IN_PROGRESS, DONE]) {
     const tplPath = joinPath(root, `.${state}.md`);

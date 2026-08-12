@@ -19,12 +19,12 @@ behaviour and keeping `init` idempotent.
 
 ### Done When
 
-- [ ] `backlog init` creates `backlog/todo/.gitkeep`, `backlog/in-progress/.gitkeep`,
+- [x] `backlog init` creates `backlog/todo/.gitkeep`, `backlog/in-progress/.gitkeep`,
       and `backlog/done/.gitkeep`.
-- [ ] Re-running `backlog init` when the `.gitkeep` files exist is a no-op for them
+- [x] Re-running `backlog init` when the `.gitkeep` files exist is a no-op for them
       (idempotent, no error, no overwrite).
-- [ ] An existing `.gitkeep` with user content is left unchanged.
-- [ ] Templates are still seeded as before.
+- [x] An existing `.gitkeep` with user content is left unchanged.
+- [x] Templates are still seeded as before.
 
 ### Uncertainties
 
@@ -58,15 +58,20 @@ file before moving to in-progress.
 
 ## Implementation Plan
 
-TODO: Fill in the Implementation Plan with phases and tests.
+Add a `.gitkeep` guard file in each state dir during `init`, guarded by
+`exists()` so it is idempotent and never overwrites user content.
 
 ### Phase 1
 
-- [ ] TODO
+- [x] Add STORE_GITKEEP(state) helper: `backlog/<state>/.gitkeep`
+- [x] In initCmd()'s state-dir loop, create `.gitkeep` (empty) unless present
 
 #### Tests
 
-- [ ] TODO
+- [x] Manual: init in a fresh repo creates all three `.gitkeep` files
+- [x] Manual: re-run init leaves existing `.gitkeep` untouched (idempotent)
+- [x] Manual: a `.gitkeep` with user content is preserved
+- [x] `deno check`, `deno lint`, `deno fmt --check`, `deno test` all pass
 
 ### Guidance [hook: post-enter]
 
