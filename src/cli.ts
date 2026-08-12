@@ -32,6 +32,20 @@ import {
 const INSTALL =
   "Install, if needed, via https://github.com/tiernacity/backlog/releases";
 
+// Baked into compiled release binaries via `deno compile --env` (see
+// .github/workflows/release.yml). In dev this resolves from git and reports
+// a stable-ish string.
+function version(): string {
+  const baked = Deno.env.get("BACKLOG_VERSION");
+  if (baked) return baked;
+  const r = new Deno.Command("git", {
+    args: ["describe", "--tags", "--always", "--dirty"],
+  }).outputSync();
+  return r.success && r.stdout.length
+    ? new TextDecoder().decode(r.stdout).trim()
+    : "unknown";
+}
+
 const STORE = "backlog";
 const STORE_DIR = (state: string): string => `${STORE}/${state}/`;
 const STORE_TEMPLATE = (state: string): string => `${STORE}/.${state}.md`;
@@ -51,6 +65,7 @@ USAGE
   backlog done [-y] [<id-or-name>]
   backlog list [--done [--all]] [--grep <regex>]
   backlog help [--short]
+  backlog --version
 
 WORKFLOW
   1. backlog new <increment name>     → drafts numbered increment in ${
@@ -540,6 +555,10 @@ const SUBHELP: Record<string, string> = {
   --grep filters each filename (slug) by a regular expression.`,
   help: `backlog help [--short]
   Prints workflow + usage. --short adds \"run backlog help now\".`,
+  "--version": `backlog --version
+  Prints the version this backlog binary was built from and exits.`,
+  version: `backlog version
+  Prints the version this backlog binary was built from and exits.`,
 };
 
 function wantHelp(rest: string[]): boolean {
@@ -550,6 +569,10 @@ export async function run(argv: string[]): Promise<number> {
   const [cmd, ...rest] = argv;
   if (cmd && SUBHELP[cmd] && wantHelp(rest)) {
     out(SUBHELP[cmd]);
+    return 0;
+  }
+  if (cmd === "--version" || cmd === "version") {
+    out(version());
     return 0;
   }
   switch (cmd) {

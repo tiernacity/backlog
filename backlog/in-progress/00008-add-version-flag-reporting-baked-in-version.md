@@ -20,20 +20,25 @@ addition.
 
 ### Done When
 
-- [ ] `backlog --version` prints a version string and exits 0.
-- [ ] The compiled release binary reports the tag it was built from (baked at
+- [x] `backlog --version` prints a version string and exits 0.
+- [x] The compiled release binary reports the tag it was built from (baked at
       compile time via `--env`).
-- [ ] In the source tree (`./backlog.sh --version`) it reports a dev fallback
+- [x] In the source tree (`./backlog.sh --version`) it reports a dev fallback
       rather than failing.
-- [ ] USAGE/help reflects the new `--version` flag and `SUBHELP` covers it.
+- [x] USAGE/help reflects the new `--version` flag and `SUBHELP` covers it.
 
 ### Uncertainties
 
-- [ ] Exact dev fallback string when no version is baked. Prefer something
+- [x] Exact dev fallback string when no version is baked. Prefer something
       useful over empty — likely `git describe` semantics or a literal `dev`.
-- [ ] Whether `--version` should also be derivable from git at build time vs
+
+      Resolved: when `BACKLOG_VERSION` is unset, fall back to
+      `git describe --tags --always --dirty`; if git fails, `unknown`.
+- [x] Whether `--version` should also be derivable from git at build time vs
       only from an explicit env input. Keep it simple: env input wins, git is
       only a dev fallback.
+
+      Resolved: `BACKLOG_VERSION` (baked) wins; git is only a dev fallback.
 
 ### Notes and analysis
 
@@ -51,15 +56,25 @@ file before moving to in-progress.
 
 ## Implementation Plan
 
-TODO: Fill in the Implementation Plan with phases and tests.
-
 ### Phase 1
 
-- [ ] TODO
+- [x] Add `version()` helper in src/cli.ts that prefers baked
+      `BACKLOG_VERSION` env, else `git describe --tags --always --dirty`.
+- [x] Handle `--version` and `version` in `run()` before the switch: print
+      version, exit 0.
+- [x] Document `--version` in USAGE and add `--version`/`version` entries to
+      `SUBHELP`.
+- [x] release.yml writes `.env.backlog` (`BACKLOG_VERSION=<tag minus v>`)
+      and passes `--env="$PWD/.env.backlog"` to `deno compile`.
 
 #### Tests
 
-- [ ] TODO
+- [x] `deno task check` passes (17 tests, fmt, lint, check).
+- [x] Dev: `./backlog.sh --version` reports `git describe` (dev fallback).
+- [x] Compiled: binary built with `--env` reports the baked version (`0.1.0`)
+      and still runs normal commands (help verified).
+- [x] Verified `--env` equals-form + absolute path bakes correctly; runtime
+      env can override.
 
 ### Guidance [hook: post-enter]
 

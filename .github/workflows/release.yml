@@ -30,14 +30,17 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: 2.9.5
-      - name: Build binary (embedding templates)
+      - name: Build binary (embedding templates and version)
         shell: bash
         run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          printf 'BACKLOG_VERSION=%s\n' "$VERSION" > .env.backlog
           deno compile -A \
             --target "${{ matrix.target }}" \
             --include src/.todo.md \
             --include src/.in-progress.md \
             --include src/.done.md \
+            --env="$PWD/.env.backlog" \
             --output "dist/backlog-${{ matrix.suffix }}" \
             mod.ts
       - name: Upload release assets
