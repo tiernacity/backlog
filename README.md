@@ -126,9 +126,10 @@ directory.
 
 ### `backlog list [--done [--all]] [--grep <regex>]`
 
-By default shows `in-progress/` then `todo/`. `--done` adds the newest items
-from `done/`; `--done --all` shows all of `done/`. `--grep <regex>` filters by
-filename.
+Lists increments one per line as `state/<filename>`, sorted by ascending id. By
+default shows `in-progress/` then `todo/`. `--done` adds the newest items from
+`done/`; `--done --all` shows all of `done/`. `--grep <regex>` filters by an
+increment's filename (slug) or its file contents.
 
 ### `backlog help [--short]`
 
