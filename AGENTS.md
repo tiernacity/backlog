@@ -7,7 +7,8 @@
 ## Code comments
 
 - Code comments MUST be concise
-- Code comments MUST ONLY be added if necessary for clarity or to avoid future regressions
+- Code comments MUST ONLY be added if necessary for clarity or to avoid future
+  regressions
 - Code comments MUST ONLY describe the code that's implemented
 - Code comments MUST NOT record historical designs, decisions or changes
 - Code comments MUST NOT reference github issues or PRs

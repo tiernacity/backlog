@@ -1,0 +1,15 @@
+{
+  "imports": {
+    "@std/assert": "jsr:@std/assert@1"
+  },
+  "tasks": {
+    "check": "deno fmt --check && deno lint && deno check mod.ts && deno test",
+    "fmt": "deno fmt",
+    "lint": "deno lint",
+    "test": "deno test"
+  },
+  "fmt": {
+    "exclude": [".todo.md", ".in-progress.md", ".done.md"]
+  },
+  "minimumDependencyAge": "P7D"
+}

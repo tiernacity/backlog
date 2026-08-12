@@ -1,24 +1,26 @@
 # backlog
 
-A tiny, agent-friendly CLI that moves one **increment file** through three states:
-`todo → in-progress → done`.
+A tiny, agent-friendly CLI that moves one **increment file** through three
+states: `todo → in-progress → done`.
 
 It exists to give humans _and_ AI agents a single shared, git-tracked record of
 "what are we working on, and where is it." State lives in files and git, never
 in a chat window.
 
 This tool encodes the three-move workflow from Umans AI's post
-[_How We Actually Ship with AI_](https://blog.umans.ai/blog/how-we-ship-with-ai/) —
-moving one increment file through `todo → in-progress → done` — as a standalone,
-installable CLI.
+[_How We Actually Ship with AI_](https://blog.umans.ai/blog/how-we-ship-with-ai/)
+— moving one increment file through `todo → in-progress → done` — as a
+standalone, installable CLI.
 
 ---
 
 ## What it is (and isn't)
 
 **What it is:** a file mover. `backlog new` drafts an increment, `backlog start`
-and `backlog done` move that same file through three directories, and `backlog
-list` reports the current state. Step-specific guidance lives in a template.
+and `backlog done` move that same file through three directories, and
+`backlog
+list` reports the current state. Step-specific guidance lives in a
+template.
 
 **What it isn't:** a project manager, an issue tracker, a todo list app, a
 scheduler, a git commit tool, or anything with a server.
@@ -84,11 +86,11 @@ your workflow. They live under `backlog/` in the project. Defaults are
 | `backlog/.in-progress.md` | entering `in-progress/` — on `start` |
 | `backlog/.done.md`        | entering `done/` — on `done`         |
 
-Only `.todo.md` is a scaffold — it carries the title and the Goal, Context,
-Done When, and Uncertainties that seed a fresh increment. The others are
-**sections only**; they're added to the task file without a title. A task file
-thus grows as it moves: a `todo/` increment has no Implementation Plan yet, so
-an agent is never tempted to draft one prematurely.
+Only `.todo.md` is a scaffold — it carries the title and the Goal, Context, Done
+When, and Uncertainties that seed a fresh increment. The others are **sections
+only**; they're added to the task file without a title. A task file thus grows
+as it moves: a `todo/` increment has no Implementation Plan yet, so an agent is
+never tempted to draft one prematurely.
 
 ### Hooks
 
@@ -104,8 +106,9 @@ the running command. A hook includes enough surrounding context to be useful;
 
 The hook marker is written `[hook: <name>]`. It can appear anywhere on a line.
 Hook text is **not removed** from the template and is reproduced **verbatim** in
-the increment files when template content is copied in. Agents should not edit or
-remove hook entries in increment files, so they don't drift from the templates.
+the increment files when template content is copied in. Agents should not edit
+or remove hook entries in increment files, so they don't drift from the
+templates.
 
 Four hook names drive the command life-cycle, in terms of the _current state_:
 
@@ -124,11 +127,11 @@ Four hook names drive the command life-cycle, in terms of the _current state_:
 Putting it together with the transitions:
 
 - `backlog new` → the `todo` template's `*-enter` hooks fire (file created).
-- `backlog start` → the `todo` template's `*-exit` hooks, then the
-  `in-progress` template's `*-enter` hooks.
-- `backlog done` → the `in-progress` template's `*-exit` hooks, then the
-  `done` template's `*-enter` hooks. `done` is terminal, so its `*-exit` hooks
-  never fire (there's nothing to move out of `done` to).
+- `backlog start` → the `todo` template's `*-exit` hooks, then the `in-progress`
+  template's `*-enter` hooks.
+- `backlog done` → the `in-progress` template's `*-exit` hooks, then the `done`
+  template's `*-enter` hooks. `done` is terminal, so its `*-exit` hooks never
+  fire (there's nothing to move out of `done` to).
 
 ---
 
@@ -161,8 +164,8 @@ Moves an increment from `in-progress/` to `done/`, applying `.done.md` to the
 task file — the moment work is declared _verified_. Fires the `in-progress` exit
 hooks then the `done` enter hooks.
 
-`<id-or-name>` is optional: when it's the only item in the source directory, it's
-implied. Specify it when there are several candidates.
+`<id-or-name>` is optional: when it's the only item in the source directory,
+it's implied. Specify it when there are several candidates.
 
 ### `backlog list [--done [--all]] [--grep <regex>]`
 
@@ -184,8 +187,8 @@ backlog — move one increment file: todo → in-progress → done
 USAGE
   backlog init
   backlog new <name>
-  backlog start [<id-or-name>]
-  backlog done [<id-or-name>]
+  backlog start [-y] [<id-or-name>]
+  backlog done [-y] [<id-or-name>]
   backlog list [--done [--all]] [--grep <regex>]
   backlog help [--short]
 WORKFLOW
@@ -216,7 +219,8 @@ Commits are yours — backlog only moves files.
 - **No prompts unless a pre-hook exists and the run is interactive.** Otherwise
   commands never block. Re-submit with `-y` to accept a pre-hook.
 - **Non-zero exit code on any failure.**
-- **Lenient `<id-or-name>` matching** for `start`/`done` (slug, number, or filename).
+- **Lenient `<id-or-name>` matching** for `start`/`done` (slug, number, or
+  filename).
 - **Self-describing.** `backlog help` covers the full workflow (suitable for an
   `AGENTS.md`); each command's own `-h` covers its details and flags.
 

@@ -1,0 +1,439 @@
+import {
+  appendTemplate,
+  baseName,
+  DONE,
+  extractHooks,
+  fileName,
+  idFromFile,
+  IN_PROGRESS,
+  matches,
+  nextId,
+  slugFromFile,
+  slugify,
+  TODO,
+} from "./core.ts";
+import {
+  cwd,
+  defaultTemplateUrl,
+  ensureDir,
+  exists,
+  gitMv,
+  isGitRepo,
+  joinPath,
+  listFiles,
+  plainMv,
+  readOptional,
+  readText,
+  writeText,
+} from "./fs.ts";
+
+const RELEASE_URL = "https://github.com/tiernacity/backlog/releases";
+
+const HELP = `backlog — move one increment file: todo → in-progress → done
+USAGE
+  backlog init
+  backlog new <name>
+  backlog start [-y] [<id-or-name>]
+  backlog done [-y] [<id-or-name>]
+  backlog list [--done [--all]] [--grep <regex>]
+  backlog help [--short]
+WORKFLOW
+  1. backlog new idea     → drafts numbered increment in todo/
+  2. backlog start idea   → moves to in-progress/ (git mv)
+  3. backlog done idea    → moves to done/ (git mv, verified)
+Commits are yours — backlog only moves files.
+Install: ${RELEASE_URL}`;
+
+const out = (s: string): void => {
+  Deno.stdout.writeSync(new TextEncoder().encode(s + "\n"));
+};
+
+const err = (s: string): void => {
+  Deno.stderr.writeSync(new TextEncoder().encode(s + "\n"));
+};
+
+function backlogRoot(): string {
+  return joinPath(cwd(), "backlog");
+}
+
+function hooksFor(tpl: string | null, name: string): string[] {
+  if (!tpl) return [];
+  return extractHooks(tpl).filter((h) => h.name === name).map((h) => h.content);
+}
+
+function printNext(contents: string[]): void {
+  for (const content of contents) {
+    for (const ln of content.split("\n")) {
+      if (ln.trim()) out(`next: ${ln.trim()}`);
+    }
+  }
+}
+
+function printGates(contents: string[]): void {
+  for (const content of contents) {
+    for (const ln of content.split("\n")) {
+      if (ln.trim()) out(`confirm: ${ln.trim()}`);
+    }
+  }
+}
+
+async function confirm(lines: string[], yes: boolean): Promise<boolean> {
+  if (!lines.length || yes) return true;
+  printGates(lines);
+  if (!isTTY()) {
+    out("pre-hooks not confirmed; re-run with -y to accept.");
+    return false;
+  }
+  await Deno.stdout.write(new TextEncoder().encode("Proceed? [y/N] "));
+  return /^\s*y/i.test(await readLine());
+}
+
+function isTTY(): boolean {
+  try {
+    return Deno.stdin.isTerminal();
+  } catch {
+    return false;
+  }
+}
+
+async function readLine(): Promise<string> {
+  const buf = new Uint8Array(1024);
+  const decoder = new TextDecoder();
+  let data = "";
+  for (;;) {
+    const n = await Deno.stdin.read(buf);
+    if (n === null) break;
+    data += decoder.decode(buf.subarray(0, n));
+    if (data.includes("\n")) break;
+  }
+  return data.replace(/\r?\n$/, "");
+}
+
+function initCmd(): number {
+  const root = backlogRoot();
+  ensureDir(root);
+  for (const state of [TODO, IN_PROGRESS, DONE]) {
+    ensureDir(joinPath(root, state));
+    out(`[ok] created backlog/${state}/`);
+  }
+  for (const state of [TODO, IN_PROGRESS, DONE]) {
+    const tplPath = joinPath(root, `.${state}.md`);
+    const name = `backlog/.${state}.md`;
+    if (exists(tplPath)) {
+      out(`[ok] seeded ${name} (already exists — left unchanged)`);
+      continue;
+    }
+    writeText(tplPath, readText(defaultTemplateUrl(state)));
+    out(`[ok] seeded ${name}`);
+  }
+  out("next: edit backlog/.template files to shape your workflow");
+  out("next: run `backlog new <name>` to draft an increment");
+  out("next: commit the structure:  git add backlog && git commit");
+  return 0;
+}
+
+function newCmd(args: string[]): Promise<number> {
+  const yes = args.includes("-y");
+  const nameArgs = args.filter((a) => a !== "-y");
+  if (!nameArgs.length) {
+    err("backlog new requires a name");
+    return Promise.resolve(1);
+  }
+  const todoDir = joinPath(backlogRoot(), TODO);
+  const templatePath = joinPath(backlogRoot(), ".todo.md");
+  if (!exists(templatePath)) {
+    err("backlog not initialized; run `backlog init` first");
+    return Promise.resolve(1);
+  }
+  const todoTpl = readText(templatePath);
+  const slug = slugify(nameArgs.join(" "));
+  const existing = listFiles(backlogRoot())
+    .filter((f) => f.endsWith(".md") && idFromFile(f) !== null);
+  const id = nextId(existing.map((f) => idFromFile(f) as number));
+  const target = joinPath(todoDir, fileName(id, slug));
+  if (exists(target)) {
+    err(`increment ${baseName(target)} already exists`);
+    return Promise.resolve(1);
+  }
+  return confirm(hooksFor(todoTpl, "pre-enter"), yes).then((ok) => {
+    if (!ok) return 1;
+    writeText(target, todoTpl);
+    out(`[ok] created backlog/todo/${baseName(target)}`);
+    printNext(hooksFor(todoTpl, "post-enter"));
+    return 0;
+  });
+}
+
+function resolveOne(
+  files: string[],
+  query: string | undefined,
+  label: string,
+): string | null {
+  if (query !== undefined) {
+    const cands = files.filter((f) => matches(f, query));
+    if (cands.length === 0) {
+      err(`no backlog item in ${label} matching '${query}'`);
+      return null;
+    }
+    if (cands.length > 1) {
+      err(
+        `ambiguous match in ${label}; be more specific: ${
+          cands.map(baseName).join(", ")
+        }`,
+      );
+      return null;
+    }
+    return cands[0];
+  }
+  if (files.length === 0) {
+    err(`nothing in ${label}; provide an increment or create one`);
+    return null;
+  }
+  if (files.length > 1) {
+    err(
+      `multiple items in ${label}; specify one: ${
+        files.map(baseName).join(", ")
+      }`,
+    );
+    return null;
+  }
+  return files[0];
+}
+
+function moveWithAppend(
+  src: string,
+  dstDir: string,
+  tpl: string | null,
+): string {
+  const name = baseName(src);
+  const dst = joinPath(dstDir, name);
+  if (isGitRepo()) {
+    gitMv(src, dst);
+  } else {
+    plainMv(src, dst);
+    out(
+      "warning: not a git repo — moved with plain mv (history not preserved)",
+    );
+  }
+  if (tpl !== null) {
+    writeText(dst, appendTemplate(readText(dst), tpl));
+  }
+  return dst;
+}
+
+function startCmd(args: string[]): Promise<number> {
+  const flags = parseSelect(args);
+  if (flags.error) {
+    err(flags.error);
+    return Promise.resolve(1);
+  }
+  const root = backlogRoot();
+  const srcDir = joinPath(root, TODO);
+  const files = listFiles(srcDir).sort();
+  const item = resolveOne(files, flags.query, "todo");
+  if (!item) return Promise.resolve(1);
+  const todoTpl = readOptional(joinPath(root, ".todo.md"));
+  const ipTpl = readOptional(joinPath(root, ".in-progress.md"));
+  const gates = [
+    ...hooksFor(todoTpl, "pre-exit"),
+    ...hooksFor(ipTpl, "pre-enter"),
+  ];
+  return confirm(gates, flags.yes).then((ok) => {
+    if (!ok) return 1;
+    moveWithAppend(item, joinPath(root, IN_PROGRESS), ipTpl);
+    out(`[ok] moved ${baseName(item)}: todo → in-progress`);
+    printNext([
+      ...hooksFor(ipTpl, "post-enter"),
+      ...hooksFor(todoTpl, "post-exit"),
+    ]);
+    return 0;
+  });
+}
+
+function doneCmd(args: string[]): Promise<number> {
+  const flags = parseSelect(args);
+  if (flags.error) {
+    err(flags.error);
+    return Promise.resolve(1);
+  }
+  const root = backlogRoot();
+  const srcDir = joinPath(root, IN_PROGRESS);
+  const files = listFiles(srcDir).sort();
+  const item = resolveOne(files, flags.query, "in-progress");
+  if (!item) return Promise.resolve(1);
+  const ipTpl = readOptional(joinPath(root, ".in-progress.md"));
+  const doneTpl = readOptional(joinPath(root, ".done.md"));
+  const gates = [
+    ...hooksFor(ipTpl, "pre-exit"),
+    ...hooksFor(doneTpl, "pre-enter"),
+  ];
+  return confirm(gates, flags.yes).then((ok) => {
+    if (!ok) return 1;
+    moveWithAppend(item, joinPath(root, DONE), doneTpl);
+    out(`[ok] moved ${baseName(item)}: in-progress → done`);
+    printNext([
+      ...hooksFor(doneTpl, "post-enter"),
+      ...hooksFor(ipTpl, "post-exit"),
+    ]);
+    return 0;
+  });
+}
+
+function parseSelect(
+  args: string[],
+): { yes: boolean; query?: string; error?: string } {
+  let yes = false;
+  const positional: string[] = [];
+  for (const a of args) {
+    if (a === "-y" || a === "--yes") {
+      yes = true;
+    } else if (a.startsWith("-")) {
+      return { yes: false, error: `unknown option: ${a}` };
+    } else {
+      positional.push(a);
+    }
+  }
+  if (positional.length > 1) {
+    return { yes: false, error: "provide at most one <id-or-name>" };
+  }
+  return { yes, query: positional[0], error: undefined };
+}
+
+function listCmd(args: string[]): number {
+  let showDone = false;
+  let allDone = false;
+  let grep: RegExp | null = null;
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (a === "--done") showDone = true;
+    else if (a === "--all") allDone = true;
+    else if (a === "--grep") {
+      grep = parseGrep(args[i + 1]);
+      if (!grep) return 1;
+      i++;
+    } else if (a.startsWith("--grep=")) {
+      grep = parseGrep(a.slice("--grep=".length));
+      if (!grep) return 1;
+    } else {
+      err(`unknown option: ${a}`);
+      return 1;
+    }
+  }
+
+  const filter = (f: string): boolean =>
+    (!grep || grep.test(baseName(withoutExt(f)))) && idFromFile(f) !== null;
+
+  const sortBySlug = (fs: string[]): string[] =>
+    fs.sort((a, b) => slugFromFile(a).localeCompare(slugFromFile(b)));
+
+  const root = backlogRoot();
+  const show = (label: string, items: string[]): void => {
+    out(`${label}:`);
+    for (const item of items) out(`  ${baseName(item)}`);
+  };
+
+  const inProgress = sortBySlug(
+    listFiles(joinPath(root, IN_PROGRESS)).filter(filter),
+  );
+  const todo = sortBySlug(listFiles(joinPath(root, TODO)).filter(filter));
+  show("in-progress", inProgress);
+  show("todo", todo);
+  if (showDone) {
+    let done = sortBySlug(listFiles(joinPath(root, DONE)).filter(filter));
+    if (!allDone) {
+      done = [...done].sort((a, b) =>
+        (idFromFile(b) ?? 0) - (idFromFile(a) ?? 0)
+      ).slice(0, 5);
+    }
+    show("done", done);
+  }
+  return 0;
+}
+
+function withoutExt(p: string): string {
+  return p.endsWith(".md") ? p.slice(0, -3) : p;
+}
+
+function parseGrep(regex: string | undefined): RegExp | null {
+  if (!regex) {
+    err("--grep requires a regular expression");
+    return null;
+  }
+  try {
+    return new RegExp(regex);
+  } catch (e) {
+    err(`invalid regex: ${(e as Error).message}`);
+    return null;
+  }
+}
+
+function helpCmd(args: string[]): number {
+  if (args.includes("--short")) {
+    out(HELP);
+    out("\nRun `backlog help` now, for workflow instructions.");
+    return 0;
+  }
+  out(HELP);
+  return 0;
+}
+
+const SUBHELP: Record<string, string> = {
+  init: `backlog init
+  Creates backlog/todo, backlog/in-progress, backlog/done and seeds the
+  three project template files (backlog/.todo.md, .in-progress.md,
+  .done.md). Idempotent: existing template files are left unchanged.`,
+  new: `backlog new <name> [-y]
+  Drafts a numbered increment in backlog/todo/. The name is slugified
+  (lowercase, kebab-case) and prefixed with the next 5-digit sequence number
+  (global max+1 across backlog/**/*.md, starting at 00001). The increment is
+  scaffolded from backlog/.todo.md, which may include [hook: pre-enter] and
+  [hook: post-enter] entries. -y skips the pre-enter gate (non-interactive).`,
+  start: `backlog start [-y] [<id-or-name>]
+  Moves a todo increment to in-progress/. <id-or-name> matches by full name,
+  slug, or number; omitting it implies the solo todo item (error if none or
+  several). Fires todo [hook: pre-exit] then in-progress [hook: pre-enter] as
+  gates, appends backlog/.in-progress.md, and moves the file (git mv when
+  inside a repo, otherwise plain mv with a warning).`,
+  done: `backlog done [-y] [<id-or-name>]
+  Moves an in-progress increment to done/. Matching rules are the same as
+  start. Fires in-progress [hook: pre-exit] then done [hook: pre-enter] as
+  gates, appends backlog/.done.md, and moves the file. done is terminal: its
+  exit hooks never fire.`,
+  list: `backlog list [--done [--all]] [--grep <regex>]
+  Shows in-progress, then todo (each sorted by slug). --done appends the 5
+  most recent done increments; --done --all shows every done increment.
+  --grep filters each filename (slug) by a regular expression.`,
+  help: `backlog help [--short]
+  Prints workflow + usage. --short adds \"run backlog help now\".`,
+};
+
+function wantHelp(rest: string[]): boolean {
+  return rest.includes("-h") || rest.includes("--help");
+}
+
+export async function run(argv: string[]): Promise<number> {
+  const [cmd, ...rest] = argv;
+  if (cmd && SUBHELP[cmd] && wantHelp(rest)) {
+    out(SUBHELP[cmd]);
+    return 0;
+  }
+  switch (cmd) {
+    case "init":
+      return initCmd();
+    case "new":
+      return await newCmd(rest);
+    case "start":
+      return await startCmd(rest);
+    case "done":
+      return await doneCmd(rest);
+    case "list":
+      return listCmd(rest);
+    case "help":
+    case undefined:
+      return helpCmd(rest);
+    default:
+      err(`unknown command: ${cmd}`);
+      out(HELP);
+      return 1;
+  }
+}
