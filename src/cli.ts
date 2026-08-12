@@ -477,20 +477,19 @@ function listCmd(args: string[]): number {
 
   const root = backlogRoot();
   const show = (label: string, items: string[]): void => {
-    out(`${label}:`);
-    for (const item of items) out(`  ${baseName(item)}`);
+    for (const item of items) out(`${label}/${baseName(item)}`);
   };
 
   const inProgress = sortByIdAsc(
     listFiles(joinPath(root, IN_PROGRESS)).filter(filter),
   );
   const todo = sortByIdAsc(listFiles(joinPath(root, TODO)).filter(filter));
-  show("in-progress", inProgress);
-  show("todo", todo);
+  show(IN_PROGRESS, inProgress);
+  show(TODO, todo);
   if (showDone) {
     let done = sortByIdAsc(listFiles(joinPath(root, DONE)).filter(filter));
     if (!allDone) done = recentDone(done, 5);
-    show("done", done);
+    show(DONE, done);
   }
   return 0;
 }
