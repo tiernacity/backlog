@@ -281,7 +281,7 @@ function newCmd(args: string[]): Promise<number> {
   });
 }
 
-// Only real increments (NNNNN-slug.md) are selectable so `.gitkeep` sentinels
+// Only real increments (id-slug.md) are selectable so `.gitkeep` sentinels
 // and other non-increment files never count toward ambiguity.
 function selectable(files: string[]): string[] {
   return files.filter((f) => idFromFile(f) !== null);
@@ -540,8 +540,8 @@ const SUBHELP: Record<string, string> = {
   \"backlog help\" documents hook names & semantics.`,
   new: `backlog new <name> [-y]
   Drafts a numbered increment in ${STORE_DIR(TODO)}. The name is slugified
-  (lowercase, kebab-case) and prefixed with the next 5-digit sequence number
-  (global max+1 across ${STORE}/**/*.md, starting at 00001). Allocation is
+  (lowercase, kebab-case) and prefixed with the next sequential number
+  (global max+1 across ${STORE}/**/*.md, starting at 1). Allocation is
   serialised under an exclusive lock on ${STORE}/.lock so concurrent runs never
   collide. The increment is
   scaffolded from ${STORE_TEMPLATE(TODO)}, which may include [hook: pre-enter]

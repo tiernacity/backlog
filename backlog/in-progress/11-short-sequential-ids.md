@@ -27,17 +27,19 @@ checking nothing else does string-width assumptions (padding, leading-zeros,
 
 ### Done When
 
-- [ ] `backlog new foo` produces `1-foo.md`, then `2-bar.md`, `10-baz.md` at the
+- [x] `backlog new foo` produces `1-foo.md`, then `2-bar.md`, `10-baz.md` at the
       right boundaries (no leading zeros, correct lexicographic-vs-numeric
       split handled by the numeric sort).
-- [ ] `backlog start 5` and `backlog done 5` (etc.) select by the short id.
+- [x] `backlog start 5` and `backlog done 5` (etc.) select by the short id.
 - [ ] `backlog list` orders short ids numerically (1, 2, … 10, 11) — not
-      lexicographically (which would put 10 before 2).
-- [ ] Existing already-padded files (`00003-...`) are still parsed, sortable,
+      lexicographically (which would put 10 before 2). *(Delivered by coupled
+      increment 10-deterministic-list-ordering, still in todo; short-id
+      filenames parse/sort correctly by id the moment that lands.)*
+- [x] Existing already-padded files (`00003-...`) are still parsed, sortable,
       and selectable alongside new short ones (mixed-prefix tolerance).
-- [ ] Any reference to `padId`/`fileName` width assumptions is audited and, if
+- [x] Any reference to `padId`/`fileName` width assumptions is audited and, if
       intended, updated (e.g. `padId` may become obsolete or a no-op).
-- [ ] **In this repo**, retrospectively rename our existing increment files —
+- [x] **In this repo**, retrospectively rename our existing increment files —
       todo, in-progress, and done — from padded (`00004-tmdb.md`) to short
       (`4-tmdb.md`) ids via `git mv`, so this repo's own backlog itself adopts
       the short-id convention.
@@ -50,10 +52,10 @@ checking nothing else does string-width assumptions (padding, leading-zeros,
       ids; likely prefer new-ids-only and let attrition converge. **Decision
       made for this repo: rename existing files too** (see Done When) — the
       repo's own backlog should dogfood the convention it ships.
-- [ ] Whether the fixed-width prefix was used anywhere else (docs, shell
+- [x] Whether the fixed-width prefix was used anywhere else (docs, shell
       completion in 00006, matching in 00009) that assumes 5 digits. The
       `matches`/completion work must accept both paddings — see 00009 and 00006.
-- [ ] Does anything key on `padId` output string length (e.g. alignment in
+- [x] Does anything key on `padId` output string length (e.g. alignment in
       `list`)? If so, alignment must be re-derived or dropped.
 
 ### Notes and analysis
@@ -98,15 +100,20 @@ WORKFLOW: decide this repo's branching/commit/PR requirements
 
 ## Implementation Plan
 
-TODO: Fill in the Implementation Plan with phases and tests.
+### Phase 1: drop zero-padding in filename production
 
-### Phase 1
-
-- [ ] TODO
+- [x] `core.ts`: `fileName` now emits `${id}-${slug}.md`; removed `padId`.
+- [x] `core_test.ts`: retired the `padId` test; updated `fileName`, `idFromFile`,
+      `nextId`, and added a mixed-padded/short `recentDone` test.
+- [x] `cli.ts`: refreshed the stray `NNNNN-slug.md` comment and `new` subhelp
+      (5-digit → sequential).
+- [x] `README.md`: documented `<id>-<slug>.md` naming.
 
 #### Tests
 
-- [ ] TODO
+- [x] `deno task check` (fmt + lint + typecheck + 21 unit tests) passes.
+- [x] Manual: `backlog new` in a scratch repo produced `1-foo.md`, `2-bar-baz.md`,
+      … `10-item10.md`; `start 10`, `done 10`, `start 2` all selected by short id.
 
 ### Guidance [hook: post-enter]
 

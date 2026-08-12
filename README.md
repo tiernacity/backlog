@@ -33,16 +33,17 @@ backlog/
   .done.md        # template applied on `done`
 ```
 
-Each increment is a single markdown file named `<NNNNN>-<slug>.md`:
+Each increment is a single markdown file named `<id>-<slug>.md`:
 
 ```
-backlog/todo/00003-tmdb-integration.md
+backlog/todo/3-tmdb-integration.md
 ```
 
 - **Slug:** the increment name is joined, stripped of invalid characters,
   lowercased, and hyphenated to kebab-case.
-- **Numbering:** numbers are globally unique. To count the next number `new`
-  sorts all files across `backlog/*` descending and increments the highest.
+- **Numbering:** numbers are globally unique and sequential. To count the next
+  number `new` sorts all files across `backlog/*` descending and increments the
+  highest.
 - **Looking up:** `start`/`done` match an increment by full filename, slug, or
   number.
 
