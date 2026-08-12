@@ -9,7 +9,7 @@
     "test": "deno test"
   },
   "fmt": {
-    "exclude": [".todo.md", ".in-progress.md", ".done.md"]
+    "exclude": ["src/.todo.md", "src/.in-progress.md", "src/.done.md"]
   },
   "minimumDependencyAge": "P7D"
 }

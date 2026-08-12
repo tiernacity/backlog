@@ -72,7 +72,7 @@ export function plainMv(src: string, dst: string): void {
 
 export function defaultTemplateUrl(state: string): URL {
   const name = TEMPLATE_NAME[state];
-  // `..` from ./src/fs.ts reaches the repo root (source) or the bundle root
-  // (compiled, where `--include` files are placed).
-  return new URL(`../${name}`, import.meta.url);
+  // `./` from ./src/fs.ts reaches src/ (source), and the bundle root when
+  // compiled, where `--include` files are placed.
+  return new URL(`./${name}`, import.meta.url);
 }

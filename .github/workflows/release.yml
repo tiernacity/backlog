@@ -35,9 +35,9 @@ jobs:
         run: |
           deno compile -A \
             --target "${{ matrix.target }}" \
-            --include .todo.md \
-            --include .in-progress.md \
-            --include .done.md \
+            --include src/.todo.md \
+            --include src/.in-progress.md \
+            --include src/.done.md \
             --output "dist/backlog-${{ matrix.suffix }}" \
             mod.ts
       - name: Upload release assets
