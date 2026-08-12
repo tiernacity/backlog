@@ -11,6 +11,14 @@ git-tracked states: `todo → in-progress → done`. Inspired by
 Download the [release](https://github.com/tiernacity/backlog/releases) binary
 for your platform and put it on your `PATH`. No runtime or dependencies.
 
+On macOS, the ad-hoc-signed binary won't open by default. Clear the Gatekeeper
+quarantine attribute once after downloading (and make it executable if needed):
+
+```
+chmod +x /path/to/backlog
+xattr -d com.apple.quarantine /path/to/backlog
+```
+
 ---
 
 ## Layout
