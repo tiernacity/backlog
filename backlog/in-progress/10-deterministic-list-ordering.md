@@ -23,16 +23,29 @@ This pairs with 00011 (short ids): the same sort key keeps working whether the
 prefix is `00003` or `3`, because we sort on the parsed numeric id, not the
 string prefix.
 
+Re-scope from agent follow-ups while implementing:
+
+- Render each increment on its own line as `state/<filename>` (e.g.
+  `todo/4-output-formatting-consistency.md`) instead of a grouped
+  `state:` header with an indented list. Only filenames are listed.
+- `--grep` should match file *contents* as well as the filename/slug, so
+  content searches like `--grep Agent` find the increment even when the
+  term is absent from its name.
+
 ### Done When
 
-- [ ] `backlog list` shows increments sorted by ascending numeric id (not slug,
+- [x] `backlog list` shows increments sorted by ascending numeric id (not slug,
       not OS order) within each state section.
-- [ ] `list --done` and `list --done --all` keep their "recent done first"
+- [x] `list --done` and `list --done --all` keep their "recent done first"
       (descending-id) semantics; only the visible default sections change.
-- [ ] Output is byte-identical across runs on the same repo (deterministic,
+- [x] Output is byte-identical across runs on the same repo (deterministic,
       independent of OS readdir order and locale).
-- [ ] Sorting is demonstrated in a test (no reliance on filesystem enumeration
+- [x] Sorting is demonstrated in a test (no reliance on filesystem enumeration
       order or `localeCompare`).
+- [x] `list` prints one line per increment as `state/<filename>`, not a grouped
+      header + indented list.
+- [x] `--grep <regex>` matches the increment's filename (slug) *or* its file
+      contents; only filenames are printed
 
 ### Uncertainties
 
@@ -64,6 +77,42 @@ This is independent of, but should not conflict with, the id work. Note in
 `listFiles` recursion picks up `.md` only (it walks everything; the sort is
 where determinism is enforced).
 
+## Implementation Plan
+
+### Phase 1 — determine field (done)
+
+- Add `sortByIdAsc(files)` to `src/core.ts`, ascending by parsed numeric id,
+  no locale and non-mutating (mirrors `recentDone`).
+- Use it in `listCmd` (`src/cli.ts`) for the in-progress, todo, and full
+  `--done --all` sections; keep `recentDone` (id-desc) for the truncated
+  default `--done` view. Drop the unused `sortBySlug` and its import.
+
+#### Tests
+
+- `sortByIdAsc sorts padded and short ids ascending numerically`
+- `sortByIdAsc does not mutate the input`
+- `deno task check` (fmt, lint, type-check, full suite) is green.
+
+### Phase 2 — output format + grep-by-contents (done)
+
+- `listCmd` prints one line per increment as `state/<filename>` via the
+  module-level `out`, instead of a grouped `state:` header + indented list.
+- `listCmd` filter matches an increment when `--grep` hits its slug **or** its
+  file contents (`readText`), so content-only terms (e.g. `Agent`) match.
+
+#### Tests
+
+- Manual: `./backlog.sh list --grep Agent` finds
+  `in-progress/10-deterministic-list-ordering.md` via contents.
+- Manual: `./backlog.sh list --grep ordering` finds it via slug.
+- Manual: `./backlog.sh list | ./backlog.sh list` id-asc and stable across
+  runs; `list --done --all` keeps desc for done.
+
+[hook: pre-exit] This increment is _ready for done_ only when:
+
+- Done When criteria are met, and Test criteria are passing and demonstrated
+- Commit the file before moving to done.
+
 ### Guidance [hook: post-enter]
 
 Fill out the Goal, Context, and Done When, then commit.
@@ -71,18 +120,6 @@ Fill out the Goal, Context, and Done When, then commit.
 WORKFLOW: decide this repo's branching/commit/PR requirements
 
 [hook: pre-exit] This increment is _ready for in-progress_ only when Done When criteria are complete and approved. Commit the file before moving to in-progress
-
-## Implementation Plan
-
-TODO: Fill in the Implementation Plan with phases and tests.
-
-### Phase 1
-
-- [ ] TODO
-
-#### Tests
-
-- [ ] TODO
 
 ### Guidance [hook: post-enter]
 
