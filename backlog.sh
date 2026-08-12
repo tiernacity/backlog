@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# Dev wrapper: run backlog from source in this repo. The installed release
-# binary on PATH is a separate thing — this script targets the working copy.
+# Dev wrapper: run backlog from source. Resolves the source tree regardless of
+# the caller's cwd, but leaves the process cwd untouched so the tool manages
+# the backlog of whatever repo you run it from (same semantics as the release
+# binary). The installed release binary on PATH is a separate thing.
 set -euo pipefail
-cd "$(dirname "$0")"
-exec deno run -A mod.ts "$@"
+DIR="$(cd "$(dirname "$0")" && pwd)"
+exec deno run -A "$DIR/mod.ts" "$@"
