@@ -71,6 +71,23 @@ Commits are yours — backlog only moves files.
 Hooks on *templates* gate each move; but are useful context in increment files, so don't remove them.
 Don't swallow backlog stdout — it carries workflow guidance for humans and agents.`;
 
+const HOOKS =
+  `HOOKS — templates gate and annotate transitions with [hook: <name>].
+Four names fire relative to the current state, as a gate (pre-*, must be accepted)
+or guidance (post-*, printed):
+
+  pre-enter   before moving into this state (gate)
+  post-enter  after moving into this state  (guidance)
+  pre-exit    before moving out of this state (gate)
+  post-exit   after moving out of this state (guidance)
+
+Transition order:
+  new  → todo enter hooks
+  start → todo exit, then in-progress enter
+  done → in-progress exit, then done enter (done is terminal)
+Default templates show each; add/sharpen them in backlog/.*.md to shape your workflow.
+See also: backlog help (workflow), backlog init (setup & template customisation).`;
+
 const out = (s: string): void => {
   Deno.stdout.writeSync(new TextEncoder().encode(s + "\n"));
 };
@@ -155,9 +172,22 @@ function initCmd(): number {
     writeText(tplPath, readText(defaultTemplateUrl(state)));
     out(`[ok] seeded ${name}`);
   }
-  out(`next: edit the state templates under ${STORE}/ to shape your workflow`);
-  out("next: run `backlog new <name>` to draft an increment");
-  out(`next: commit the structure:  git add ${STORE} && git commit`);
+  out(
+    `next: ${STORE}/ now holds your workflow — three templates and three state dirs`,
+  );
+  out(
+    `next: resolve every \"WORKFLOW\" marker in the templates now (one-time policy)`,
+  );
+  out(
+    "next: templates may also gain extra [hook: <name>]s to gate or guide transitions",
+  );
+  out("next:   see `backlog help` (HOOKS section) for hook names & semantics");
+  out(
+    `next: once templates are shaped, commit them:  git add ${STORE} && git commit`,
+  );
+  out(
+    "next: then increments flow: `backlog new <name>` → fill it in → `backlog start` → `backlog done`",
+  );
   return 0;
 }
 
@@ -238,11 +268,14 @@ function moveWithAppend(
   src: string,
   dstDir: string,
   tpl: string | null,
-): string {
+): string | null {
   const name = baseName(src);
   const dst = joinPath(dstDir, name);
   if (isGitRepo()) {
-    gitMv(src, dst);
+    if (!gitMv(src, dst)) {
+      err(`failed to move ${name} with git mv — is it committed?`);
+      return null;
+    }
   } else {
     plainMv(src, dst);
     out(
@@ -274,7 +307,8 @@ function startCmd(args: string[]): Promise<number> {
   ];
   return confirm(gates, flags.yes).then((ok) => {
     if (!ok) return 1;
-    moveWithAppend(item, joinPath(root, IN_PROGRESS), ipTpl);
+    const moved = moveWithAppend(item, joinPath(root, IN_PROGRESS), ipTpl);
+    if (!moved) return 1;
     out(`[ok] moved ${baseName(item)}: todo → in-progress`);
     printNext([
       ...hooksFor(ipTpl, "post-enter"),
@@ -303,7 +337,8 @@ function doneCmd(args: string[]): Promise<number> {
   ];
   return confirm(gates, flags.yes).then((ok) => {
     if (!ok) return 1;
-    moveWithAppend(item, joinPath(root, DONE), doneTpl);
+    const moved = moveWithAppend(item, joinPath(root, DONE), doneTpl);
+    if (!moved) return 1;
     out(`[ok] moved ${baseName(item)}: in-progress → done`);
     printNext([
       ...hooksFor(doneTpl, "post-enter"),
@@ -406,6 +441,7 @@ function helpCmd(args: string[]): number {
     return 0;
   }
   out(HELP);
+  out(HOOKS);
   return 0;
 }
 
@@ -418,7 +454,9 @@ const SUBHELP: Record<string, string> = {
   } and seeds
   the three project template files (${STORE_TEMPLATE(TODO)},
   ${STORE_TEMPLATE(IN_PROGRESS)}, ${STORE_TEMPLATE(DONE)}). Idempotent: existing
-  template files are left unchanged.`,
+  template files are left unchanged. After seeding, resolve the \"WORKFLOW\"
+  markers in each template (one-time policy decisions) and shape your hooks;
+  \"backlog help\" documents hook names & semantics.`,
   new: `backlog new <name> [-y]
   Drafts a numbered increment in ${STORE_DIR(TODO)}. The name is slugified
   (lowercase, kebab-case) and prefixed with the next 5-digit sequence number

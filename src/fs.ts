@@ -59,11 +59,9 @@ export function isGitRepo(): boolean {
   return r.success && new TextDecoder().decode(r.stdout).trim() === "true";
 }
 
-export function gitMv(src: string, dst: string): void {
+export function gitMv(src: string, dst: string): boolean {
   const r = new Deno.Command("git", { args: ["mv", src, dst] }).outputSync();
-  if (!r.success) {
-    throw new Error(new TextDecoder().decode(r.stderr).trim());
-  }
+  return r.success;
 }
 
 export function plainMv(src: string, dst: string): void {
