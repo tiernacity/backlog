@@ -55,3 +55,33 @@ Workflow — semi-linear `main`:
 [hook: pre-exit] This increment is _ready for in-progress_ only when the Done
 When criteria are complete and approved, and the file is committed. Commit the
 file before moving to in-progress.
+
+## Implementation Plan
+
+TODO: Fill in the Implementation Plan with phases and tests.
+
+### Phase 1
+
+- [ ] TODO
+
+#### Tests
+
+- [ ] TODO
+
+### Guidance [hook: post-enter]
+
+This increment is now on a topic branch; work continues on that branch only.
+Do not commit to `main`.
+
+Create the branch covering the moved increment file (unless it already lives
+on a branch), commit the move, then work through the Done When checklist and
+the Implementation Plan, committing as you go.
+
+- MUST: the increment is committed, on a branch other than `main`.
+- The user MAY have already created the branch and committed the file.
+
+[hook: pre-exit] This increment is _ready for done_ only when:
+- Done When criteria are met, and Test criteria are passing and demonstrated;
+- the increment is committed on a branch (not `main`).
+
+Commit the file before moving to done.
