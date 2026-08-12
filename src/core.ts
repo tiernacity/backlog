@@ -37,12 +37,8 @@ export function slugify(input: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-export function padId(n: number): string {
-  return String(n).padStart(5, "0");
-}
-
 export function fileName(id: number, slug: string): string {
-  return `${padId(id)}-${slug}.md`;
+  return `${id}-${slug}.md`;
 }
 
 export function idFromFile(p: string): number | null {

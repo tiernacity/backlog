@@ -5,7 +5,6 @@ import {
   idFromFile,
   matches,
   nextId,
-  padId,
   recentDone,
   slugFromFile,
   slugify,
@@ -19,18 +18,16 @@ Deno.test("slugify lowercases and kebab-cases", () => {
   assertEquals(slugify("   "), "");
 });
 
-Deno.test("padId zero-pads to five digits", () => {
-  assertEquals(padId(1), "00001");
-  assertEquals(padId(12345), "12345");
+Deno.test("fileName composes id and slug without padding", () => {
+  assertEquals(fileName(7, "fix-bug"), "7-fix-bug.md");
+  assertEquals(fileName(10, "baz"), "10-baz.md");
 });
 
-Deno.test("fileName composes id and slug", () => {
-  assertEquals(fileName(7, "fix-bug"), "00007-fix-bug.md");
-});
-
-Deno.test("idFromFile parses leading id", () => {
+Deno.test("idFromFile parses leading id (padded or short)", () => {
   assertEquals(idFromFile("backlog/todo/00003-tmdb.md"), 3);
+  assertEquals(idFromFile("backlog/todo/10-tmdb.md"), 10);
   assertEquals(idFromFile("00003-tmdb.md"), 3);
+  assertEquals(idFromFile("10-tmdb.md"), 10);
   assertEquals(idFromFile("tmdb.md"), null);
 });
 
@@ -40,7 +37,7 @@ Deno.test("slugFromFile strips id", () => {
 
 Deno.test("nextId increments from highest or starts at one", () => {
   assertEquals(nextId([]), 1);
-  assertEquals(nextId([3, 1, 9]), 10);
+  assertEquals(nextId([1, 10, 2]), 11);
 });
 
 Deno.test("matches resolves by number, slug, or filename", () => {
@@ -176,6 +173,22 @@ Deno.test("recentDone keeps the newest id first", () => {
     "backlog/done/00005-c.md",
     "backlog/done/00002-b.md",
     "backlog/done/00001-a.md",
+  ]);
+});
+
+Deno.test("recentDone sorts padded and short ids numerically mixed", () => {
+  const files = [
+    "backlog/done/2-b.md",
+    "backlog/done/00010-j.md",
+    "backlog/done/11-k.md",
+    "backlog/done/00003-c.md",
+  ];
+  const result = recentDone(files, 5);
+  assertEquals(result, [
+    "backlog/done/11-k.md",
+    "backlog/done/00010-j.md",
+    "backlog/done/00003-c.md",
+    "backlog/done/2-b.md",
   ]);
 });
 
