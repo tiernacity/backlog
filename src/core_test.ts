@@ -53,29 +53,60 @@ Deno.test("matches resolves by number, slug, or filename", () => {
   assertEquals(matches(f, ""), false);
 });
 
-Deno.test("extractHooks pulls a section from a header hook", () => {
+Deno.test("extractHooks pulls a section from a header hook and keeps the tag", () => {
   const tpl =
     `## Ship Criteria [hook: pre-exit]\n\n- [ ] a\n- [ ] b\n\n## Other\nx`;
   const hooks = extractHooks(tpl);
   assertEquals(hooks.length, 1);
   assertEquals(hooks[0].name, "pre-exit");
-  assertEquals(hooks[0].content, `## Ship Criteria\n\n- [ ] a\n- [ ] b`);
+  assertEquals(
+    hooks[0].content,
+    `## Ship Criteria [hook: pre-exit]\n\n- [ ] a\n- [ ] b`,
+  );
 });
 
-Deno.test("extractHooks pulls a paragraph from an inline hook", () => {
+Deno.test("extractHooks pulls a paragraph from an inline hook and keeps the tag", () => {
   const tpl = `Fill it out and commit. [hook: post-enter]\nThen do more.`;
   const hooks = extractHooks(tpl);
   assertEquals(hooks.length, 1);
   assertEquals(hooks[0].name, "post-enter");
-  assertEquals(hooks[0].content, "Fill it out and commit.\nThen do more.");
+  assertEquals(
+    hooks[0].content,
+    "Fill it out and commit. [hook: post-enter]\nThen do more.",
+  );
 });
 
-Deno.test("extractHooks pulls just the line for an isolated hook", () => {
+Deno.test("extractHooks pulls just the line for an isolated hook, keeping the tag", () => {
   const tpl = `\n[hook: pre-exit] ready only when done when criteria met\n`;
   const hooks = extractHooks(tpl);
   assertEquals(hooks.length, 1);
   assertEquals(hooks[0].name, "pre-exit");
-  assertEquals(hooks[0].content, "ready only when done when criteria met");
+  assertEquals(
+    hooks[0].content,
+    "[hook: pre-exit] ready only when done when criteria met",
+  );
+});
+
+Deno.test("extractHooks keeps an inline hook's bullet list after a lead-in line", () => {
+  const tpl =
+    `[hook: pre-exit] ready only when:\n\n- [ ] a\n- [ ] b\n\n## Next\nx`;
+  const hooks = extractHooks(tpl);
+  assertEquals(hooks.length, 1);
+  assertEquals(
+    hooks[0].content,
+    "[hook: pre-exit] ready only when:\n\n- [ ] a\n- [ ] b",
+  );
+});
+
+Deno.test("extractHooks keeps blank lines inside an inline hook", () => {
+  const tpl = `[hook: post-enter] first para.\n\nsecond para.\n
+\n[hook: pre-exit] gate`;
+  const hooks = extractHooks(tpl);
+  assertEquals(
+    hooks[0].content,
+    "[hook: post-enter] first para.\n\nsecond para.",
+  );
+  assertEquals(hooks[1].name, "pre-exit");
 });
 
 Deno.test("extractHooks reproduces multiple hooks in order", () => {

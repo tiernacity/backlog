@@ -55,3 +55,48 @@ Fill out the Goal, Context, and Done When, then commit.
 [hook: pre-exit] This increment is _ready for in-progress_ only when the Done
 When criteria are complete and approved, and the file is committed. Commit the
 file before moving to in-progress.
+
+## Implementation Plan
+
+- Adjust `extractBlock` in src/core.ts to keep hook blocks contiguous and
+  keep the `[hook:]` tag.
+- Adjust printNext/printGates in src/cli.ts to preserve blank lines, and add
+  a blank line after `[ok]` status lines.
+- Verify every render path (new/start/done, gates + guidance) with tests.
+
+### Phase 1 — parser: contiguous hook blocks & keep tag
+
+- [ ] `extractBlock`: inline hooks run until next `[hook:]` or a heading,
+      preserving interior blank lines.
+- [ ] Do not strip the `[hook:]` tag from the hook line (heading or inline).
+
+#### Tests
+
+- [ ] Inline hook with a lead-in line + trailing bullets keeps all lines.
+- [ ] Inline hook containing a blank line keeps both paragraphs.
+- [ ] Heading hook still extracts under `### Guidance [hook: ...]`.
+- [ ] Hook line keeps its `[hook: ...]` tag in content.
+
+### Phase 2 — output: blank lines & blank-line preservation
+
+- [ ] `printNext`/`printGates` emit blank lines for empty input lines.
+- [ ] `[ok]` status lines in new/init/start/done are followed by a blank line.
+
+#### Tests
+
+- [ ] Printed guidance renders blank lines between paragraphs.
+- [ ] Gate confirm (pre-hook) shows bullets under a lead-in line.
+- [ ] Status command output has a blank line after each `[ok]` block.
+
+### Guidance [hook: post-enter]
+
+Work on this increment MUST be done in a topic branch. If the branch does not already exist
+create it now. Commit the in-progress file to the branch.
+
+Populate the implementation plan and tests, and keep them up-to-date as implementation
+proceeds.
+
+[hook: pre-exit] This increment is _ready for done_ only when:
+
+- Done When criteria are met, and Test criteria are passing and demonstrated
+- Commit the file before moving to done.
