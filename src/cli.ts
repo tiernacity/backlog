@@ -8,6 +8,7 @@ import {
   IN_PROGRESS,
   matches,
   nextId,
+  recentDone,
   slugFromFile,
   slugify,
   TODO,
@@ -340,11 +341,7 @@ function listCmd(args: string[]): number {
   show("todo", todo);
   if (showDone) {
     let done = sortBySlug(listFiles(joinPath(root, DONE)).filter(filter));
-    if (!allDone) {
-      done = [...done].sort((a, b) =>
-        (idFromFile(b) ?? 0) - (idFromFile(a) ?? 0)
-      ).slice(0, 5);
-    }
+    if (!allDone) done = recentDone(done, 5);
     show("done", done);
   }
   return 0;
