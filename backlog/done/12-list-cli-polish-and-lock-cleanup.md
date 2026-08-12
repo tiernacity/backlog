@@ -151,3 +151,15 @@ proceeds.
 
 - Done When criteria are met, and Test criteria are passing and demonstrated
 - Commit the file before moving to done.
+
+## Guidance [hook: post-enter]
+
+This increment is _done_ on its topic branch. To integrate into `main`
+with human approval required before merging:
+
+- After the `done` file is committed on the topic branch, get approval to merge.
+- The user/agent then merges with `--no-ff` into `main`:
+  `git switch main && git merge --no-ff <branch>`
+- Then remove the feature branch
+- MUST: get approval before merging into `main`.
+- `main` only receives an increment via `merge --no-ff`.
