@@ -472,8 +472,12 @@ function listCmd(args: string[]): number {
     }
   }
 
-  const filter = (f: string): boolean =>
-    (!grep || grep.test(baseName(withoutExt(f)))) && idFromFile(f) !== null;
+  const filter = (f: string): boolean => {
+    if (idFromFile(f) === null) return false;
+    if (!grep) return true;
+    if (grep.test(baseName(withoutExt(f)))) return true;
+    return grep.test(readText(f));
+  };
 
   const root = backlogRoot();
   const show = (label: string, items: string[]): void => {
@@ -560,7 +564,8 @@ const SUBHELP: Record<string, string> = {
   list: `backlog list [--done [--all]] [--grep <regex>]
   Shows in-progress, then todo (each sorted by slug). --done appends the 5
   most recent done increments; --done --all shows every done increment.
-  --grep filters each filename (slug) by a regular expression.`,
+  --grep filters each increment by a regular expression matching its
+  filename (slug) or file contents.`,
   help: `backlog help [--short]
   Prints workflow + usage. --short adds \"run backlog help now\".`,
   "--version": `backlog --version
