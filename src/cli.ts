@@ -28,9 +28,20 @@ import {
   writeText,
 } from "./fs.ts";
 
-const RELEASE_URL = "https://github.com/tiernacity/backlog/releases";
+const INSTALL =
+  "Install, if needed, via https://github.com/tiernacity/backlog/releases";
 
-const HELP = `backlog — move one increment file: todo → in-progress → done
+const STORE = "backlog";
+const STORE_DIR = (state: string): string => `${STORE}/${state}/`;
+const STORE_TEMPLATE = (state: string): string => `${STORE}/.${state}.md`;
+
+const HEADLINE =
+  `Use \`backlog\` for task workflow support. Manage an increment from todo → in-progress → done
+
+${INSTALL}`;
+
+const HELP = `${HEADLINE}
+
 USAGE
   backlog init
   backlog new <name>
@@ -38,14 +49,27 @@ USAGE
   backlog done [-y] [<id-or-name>]
   backlog list [--done [--all]] [--grep <regex>]
   backlog help [--short]
+
 WORKFLOW
-  1. backlog new idea     → drafts numbered increment in todo/
-  2. backlog start idea   → moves to in-progress/ (git mv)
-  3. backlog done idea    → moves to done/ (git mv, verified)
+  1. backlog new <increment name>     → drafts numbered increment in ${
+  STORE_DIR(
+    TODO,
+  )
+}
+  2. backlog start <increment name or number>   → moves to ${
+  STORE_DIR(
+    IN_PROGRESS,
+  )
+} (git mv)
+  3. backlog done <increment name or number>    → moves to ${
+  STORE_DIR(
+    DONE,
+  )
+} (git mv, verified)
+
 Commits are yours — backlog only moves files.
 Hooks on *templates* gate each move; but are useful context in increment files, so don't remove them.
-Don't swallow backlog stdout — it carries workflow guidance for humans and agents.
-Install: ${RELEASE_URL}`;
+Don't swallow backlog stdout — it carries workflow guidance for humans and agents.`;
 
 const out = (s: string): void => {
   Deno.stdout.writeSync(new TextEncoder().encode(s + "\n"));
@@ -119,11 +143,11 @@ function initCmd(): number {
   ensureDir(root);
   for (const state of [TODO, IN_PROGRESS, DONE]) {
     ensureDir(joinPath(root, state));
-    out(`[ok] created backlog/${state}/`);
+    out(`[ok] created ${STORE_DIR(state)}`);
   }
   for (const state of [TODO, IN_PROGRESS, DONE]) {
     const tplPath = joinPath(root, `.${state}.md`);
-    const name = `backlog/.${state}.md`;
+    const name = STORE_TEMPLATE(state);
     if (exists(tplPath)) {
       out(`[ok] seeded ${name} (already exists — left unchanged)`);
       continue;
@@ -131,9 +155,9 @@ function initCmd(): number {
     writeText(tplPath, readText(defaultTemplateUrl(state)));
     out(`[ok] seeded ${name}`);
   }
-  out("next: edit backlog/.template files to shape your workflow");
+  out(`next: edit the state templates under ${STORE}/ to shape your workflow`);
   out("next: run `backlog new <name>` to draft an increment");
-  out("next: commit the structure:  git add backlog && git commit");
+  out(`next: commit the structure:  git add ${STORE} && git commit`);
   return 0;
 }
 
@@ -164,7 +188,7 @@ function newCmd(args: string[]): Promise<number> {
   return confirm(hooksFor(todoTpl, "pre-enter"), yes).then((ok) => {
     if (!ok) return 1;
     writeText(target, todoTpl);
-    out(`[ok] created backlog/todo/${baseName(target)}`);
+    out(`[ok] created ${STORE_DIR(TODO)}${baseName(target)}`);
     printNext(hooksFor(todoTpl, "post-enter"));
     return 0;
   });
@@ -183,9 +207,11 @@ function resolveOne(
     }
     if (cands.length > 1) {
       err(
-        `ambiguous match in ${label}; be more specific: ${cands
-          .map(baseName)
-          .join(", ")}`,
+        `ambiguous match in ${label}; be more specific: ${
+          cands
+            .map(baseName)
+            .join(", ")
+        }`,
       );
       return null;
     }
@@ -197,9 +223,11 @@ function resolveOne(
   }
   if (files.length > 1) {
     err(
-      `multiple items in ${label}; specify one: ${files
-        .map(baseName)
-        .join(", ")}`,
+      `multiple items in ${label}; specify one: ${
+        files
+          .map(baseName)
+          .join(", ")
+      }`,
     );
     return null;
   }
@@ -373,8 +401,8 @@ function parseGrep(regex: string | undefined): RegExp | null {
 
 function helpCmd(args: string[]): number {
   if (args.includes("--short")) {
-    out(HELP);
-    out("\nRun `backlog help` now, for workflow instructions.");
+    out(HEADLINE);
+    out("\nRun `backlog help` **now** for workflow instructions.");
     return 0;
   }
   out(HELP);
@@ -383,25 +411,34 @@ function helpCmd(args: string[]): number {
 
 const SUBHELP: Record<string, string> = {
   init: `backlog init
-  Creates backlog/todo, backlog/in-progress, backlog/done and seeds the
-  three project template files (backlog/.todo.md, .in-progress.md,
-  .done.md). Idempotent: existing template files are left unchanged.`,
+  Creates ${STORE_DIR(TODO)}, ${STORE_DIR(IN_PROGRESS)}, ${
+    STORE_DIR(
+      DONE,
+    )
+  } and seeds
+  the three project template files (${STORE_TEMPLATE(TODO)},
+  ${STORE_TEMPLATE(IN_PROGRESS)}, ${STORE_TEMPLATE(DONE)}). Idempotent: existing
+  template files are left unchanged.`,
   new: `backlog new <name> [-y]
-  Drafts a numbered increment in backlog/todo/. The name is slugified
+  Drafts a numbered increment in ${STORE_DIR(TODO)}. The name is slugified
   (lowercase, kebab-case) and prefixed with the next 5-digit sequence number
-  (global max+1 across backlog/**/*.md, starting at 00001). The increment is
-  scaffolded from backlog/.todo.md, which may include [hook: pre-enter] and
-  [hook: post-enter] entries. -y skips the pre-enter gate (non-interactive).`,
+  (global max+1 across ${STORE}/**/*.md, starting at 00001). The increment is
+  scaffolded from ${STORE_TEMPLATE(TODO)}, which may include [hook: pre-enter]
+  and [hook: post-enter] entries. -y skips the pre-enter gate (non-interactive).`,
   start: `backlog start [-y] [<id-or-name>]
   Moves a todo increment to in-progress/. <id-or-name> matches by full name,
   slug, or number; omitting it implies the solo todo item (error if none or
   several). Fires todo [hook: pre-exit] then in-progress [hook: pre-enter] as
-  gates, appends backlog/.in-progress.md, and moves the file (git mv when
+  gates, appends ${STORE_TEMPLATE(IN_PROGRESS)}, and moves the file (git mv when
   inside a repo, otherwise plain mv with a warning).`,
   done: `backlog done [-y] [<id-or-name>]
   Moves an in-progress increment to done/. Matching rules are the same as
   start. Fires in-progress [hook: pre-exit] then done [hook: pre-enter] as
-  gates, appends backlog/.done.md, and moves the file. done is terminal: its
+  gates, appends ${
+    STORE_TEMPLATE(
+      DONE,
+    )
+  }, and moves the file. done is terminal: its
   exit hooks never fire.`,
   list: `backlog list [--done [--all]] [--grep <regex>]
   Shows in-progress, then todo (each sorted by slug). --done appends the 5

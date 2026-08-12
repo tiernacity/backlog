@@ -1,12 +1,15 @@
 # backlog
 
-A tiny, agent-friendly CLI that moves one **increment file** through three git-tracked states: `todo → in-progress → done`. Inspired by [this](https://blog.umans.ai/blog/how-we-ship-with-ai/).
+A tiny, agent-friendly CLI that moves one **increment file** through three
+git-tracked states: `todo → in-progress → done`. Inspired by
+[this](https://blog.umans.ai/blog/how-we-ship-with-ai/).
 
 ---
 
 ## Install
 
-Download the [release](https://github.com/tiernacity/backlog/releases) binary for your platform and put it on your `PATH`. No runtime or dependencies.
+Download the [release](https://github.com/tiernacity/backlog/releases) binary
+for your platform and put it on your `PATH`. No runtime or dependencies.
 
 ---
 
@@ -28,9 +31,12 @@ Each increment is a single markdown file named `<NNNNN>-<slug>.md`:
 backlog/todo/00003-tmdb-integration.md
 ```
 
-- **Slug:** the increment name is joined, stripped of invalid characters, lowercased, and hyphenated to kebab-case.
-- **Numbering:** numbers are globally unique. To count the next number `new` sorts all files across `backlog/*` descending and increments the highest.
-- **Looking up:** `start`/`done` match an increment by full filename, slug, or number.
+- **Slug:** the increment name is joined, stripped of invalid characters,
+  lowercased, and hyphenated to kebab-case.
+- **Numbering:** numbers are globally unique. To count the next number `new`
+  sorts all files across `backlog/*` descending and increments the highest.
+- **Looking up:** `start`/`done` match an increment by full filename, slug, or
+  number.
 
 ---
 
@@ -46,13 +52,19 @@ Each state has a template under `backlog/`. `init` seeds defaults (see
 | `backlog/.in-progress.md` | `start` → `in-progress/` |
 | `backlog/.done.md`        | `done` → `done/`         |
 
-`.todo.md` is a scaffold for the increment (title + Goal/Context/Done When/Uncertainties). Others templates **add sections**, so a task file grows as the increment progresses.
+`.todo.md` is a scaffold for the increment (title + Goal/Context/Done
+When/Uncertainties). Others templates **add sections**, so a task file grows as
+the increment progresses.
 
 ### Hooks
 
-Templates can carry hooks that gate and annotate the transitions. A hook is the text `[hook: <name>]` on a line; `backlog` prints or requires acceptance of the relevant hook content.
+Templates can carry hooks that gate and annotate the transitions. A hook is the
+text `[hook: <name>]` on a line; `backlog` prints or requires acceptance of the
+relevant hook content.
 
-Context is extracted by placement of the hook: on a section header it spans to the next same-level heading or hook; inside a paragraph, the whole paragraph; otherwise just its own line.
+Context is extracted by placement of the hook: on a section header it spans to
+the next same-level heading or hook; inside a paragraph, the whole paragraph;
+otherwise just its own line.
 
 Four hooks fire relative to the current state:
 
@@ -67,56 +79,72 @@ Transitions:
 
 - `new` → `todo` enter hooks.
 - `start` → `todo` exit hooks, then `in-progress` enter hooks.
-- `done` → `in-progress` exit hooks, then `done` enter hooks (`done` does not support exit hooks).
+- `done` → `in-progress` exit hooks, then `done` enter hooks (`done` does not
+  support exit hooks).
 
-`pre-*` hooks must be accepted (`y`/`n`, or supply `-y` to the command); `post-*` hooks just print. In a non-interactive run commands never block.
+`pre-*` hooks must be accepted (`y`/`n`, or supply `-y` to the command);
+`post-*` hooks just print. In a non-interactive run commands never block.
 
 ---
 
 ## Commands
 
-Each command prints concise stdout — what happened and what to do next. Hooks supply the "what to do next" (post-hooks) and the gates (pre-hooks).
+Each command prints concise stdout — what happened and what to do next. Hooks
+supply the "what to do next" (post-hooks) and the gates (pre-hooks).
 
 ### `backlog init`
 
-Creates `todo/`, `in-progress/`, `done/` and seeds the three templates if missing. Idempotent.
+Creates `todo/`, `in-progress/`, `done/` and seeds the three templates if
+missing. Idempotent.
 
 ### `backlog new <name>`
 
-Drafts an increment into `todo/` from `.todo.md`, auto-numbered next, named from the slugified `<name>`. Fires `todo` enter hooks.
+Drafts an increment into `todo/` from `.todo.md`, auto-numbered next, named from
+the slugified `<name>`. Fires `todo` enter hooks.
 
 ### `backlog start [<id-or-name>]`
 
-Moves an increment `todo/ → in-progress/`, applying `.in-progress.md`. Inside a git repo uses `git mv`. Fires `todo` exit hooks, then `in-progress` enter hooks.
+Moves an increment `todo/ → in-progress/`, applying `.in-progress.md`. Inside a
+git repo uses `git mv`. Fires `todo` exit hooks, then `in-progress` enter hooks.
 
 ### `backlog done [<id-or-name>]`
 
-Moves an increment `in-progress/ → done/`, applying `.done.md`. Uses `git mv` in a git repo. Fires `in-progress` exit hooks, then `done` enter hooks.
+Moves an increment `in-progress/ → done/`, applying `.done.md`. Uses `git mv` in
+a git repo. Fires `in-progress` exit hooks, then `done` enter hooks.
 
-`<id-or-name>` is optional — implied when it's the only item in the source directory.
+`<id-or-name>` is optional — implied when it's the only item in the source
+directory.
 
 ### `backlog list [--done [--all]] [--grep <regex>]`
 
-By default shows `in-progress/` then `todo/`. `--done` adds the newest items from `done/`; `--done --all` shows all of `done/`. `--grep <regex>` filters by filename.
+By default shows `in-progress/` then `todo/`. `--done` adds the newest items
+from `done/`; `--done --all` shows all of `done/`. `--grep <regex>` filters by
+filename.
 
 ### `backlog help [--short]`
 
-Prints the workflow and usage for pasting into an `AGENTS.md`/`CLAUDE.md`. `--short` prints a shorter version ending with a pointer to `backlog help`; both end with a pointer to the GitHub releases page.
+Prints the workflow and usage for pasting into an `AGENTS.md`/`CLAUDE.md`.
+`--short` prints a shorter version ending with a pointer to `backlog help`; both
+end with a pointer to the GitHub releases page.
 
 ---
 
 ## Git policy
 
-`backlog` never commits. Its only git operation is `git mv` for `start`/`done`, to preserve file history, and only inside a git repo.
+`backlog` never commits. Its only git operation is `git mv` for `start`/`done`,
+to preserve file history, and only inside a git repo.
 
 ---
 
 ## Agent-friendly
 
-- **Stable, parseable stdout.** Facts print as `[ok] …` lines; guidance and gates print with their hook name. Don't swallow stdout, it's part of the workflow.
+- **Stable, parseable stdout.** Facts print as `[ok] …` lines; guidance and
+  gates print with their hook name. Don't swallow stdout, it's part of the
+  workflow.
 - **Non-zero exit code on any failure.**
 - **Lenient `<id-or-name>` matching** (slug, number, or filename).
-- **Self-describing.** `backlog help` covers the workflow; each command's `-h` covers its details and flags.
+- **Self-describing.** `backlog help` covers the workflow; each command's `-h`
+  covers its details and flags.
 
 ---
 
@@ -131,4 +159,5 @@ $ backlog start content-api                  # todo → in-progress/
 $ backlog done content-api                   # in-progress → done/
 ```
 
-One file, three directories, full history via `git mv`, visible to any human or agent that reads the repo.
+One file, three directories, full history via `git mv`, visible to any human or
+agent that reads the repo.
