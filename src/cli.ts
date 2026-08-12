@@ -97,6 +97,20 @@ const err = (s: string): void => {
   Deno.stderr.writeSync(new TextEncoder().encode(s + "\n"));
 };
 
+// Collapses consecutive blank lines so status, gate, and guidance output
+// reads cleanly when they meet.
+let lastBlank = true;
+const outLn = (s: string): void => {
+  if (!s && lastBlank) return;
+  out(s);
+  lastBlank = s === "";
+};
+
+const okLine = (s: string): void => {
+  outLn(`[ok] ${s}`);
+  outLn("");
+};
+
 function backlogRoot(): string {
   return joinPath(cwd(), "backlog");
 }
@@ -108,26 +122,26 @@ function hooksFor(tpl: string | null, name: string): string[] {
     .map((h) => h.content);
 }
 
+function renderContent(content: string): void {
+  for (const ln of content.split("\n")) outLn(ln);
+}
+
 function printNext(contents: string[]): void {
   if (!contents.length) return;
-  out("");
+  outLn("");
   const blocks = contents.filter((c) => c.trim());
   blocks.forEach((content, i) => {
-    if (i > 0) out("---");
-    for (const ln of content.split("\n")) {
-      if (ln.trim()) out(ln.trim());
-    }
+    if (i > 0) outLn("---");
+    renderContent(content);
   });
-  out("");
+  outLn("");
 }
 
 function printGates(contents: string[]): void {
   const blocks = contents.filter((c) => c.trim());
   blocks.forEach((content, i) => {
-    if (i > 0) out("---");
-    for (const ln of content.split("\n")) {
-      if (ln.trim()) out(ln.trim());
-    }
+    if (i > 0) outLn("---");
+    renderContent(content);
   });
 }
 
@@ -168,24 +182,23 @@ function initCmd(): number {
   ensureDir(root);
   for (const state of [TODO, IN_PROGRESS, DONE]) {
     ensureDir(joinPath(root, state));
-    out(`[ok] created ${STORE_DIR(state)}`);
+    okLine(`created ${STORE_DIR(state)}`);
     const gk = STORE_GITKEEP(state);
     if (!exists(gk)) {
       writeText(gk, "");
-      out(`[ok] created ${gk} (keeps empty dir tracked)`);
+      okLine(`created ${gk} (keeps empty dir tracked)`);
     }
   }
   for (const state of [TODO, IN_PROGRESS, DONE]) {
     const tplPath = joinPath(root, `.${state}.md`);
     const name = STORE_TEMPLATE(state);
     if (exists(tplPath)) {
-      out(`[ok] seeded ${name} (already exists — left unchanged)`);
+      okLine(`seeded ${name} (already exists — left unchanged)`);
       continue;
     }
     writeText(tplPath, readText(defaultTemplateUrl(state)));
-    out(`[ok] seeded ${name}`);
+    okLine(`seeded ${name}`);
   }
-  out("");
   out(
     `${STORE}/ now holds your workflow — three templates and three state dirs`,
   );
@@ -230,12 +243,13 @@ function newCmd(args: string[]): Promise<number> {
   return confirm(hooksFor(todoTpl, "pre-enter"), yes).then((ok) => {
     if (!ok) return 1;
     writeText(target, todoTpl);
-    out(`[ok] created ${STORE_DIR(TODO)}${baseName(target)}`);
-    out(
+    okLine(`created ${STORE_DIR(TODO)}${baseName(target)}`);
+    outLn(
       `fill out the increment, then commit it before moving it on:  git add ${
         STORE_DIR(TODO)
       }${baseName(target)} && git commit`,
     );
+    outLn("");
     printNext(hooksFor(todoTpl, "post-enter"));
     return 0;
   });
@@ -337,7 +351,7 @@ function startCmd(args: string[]): Promise<number> {
       "start",
     );
     if (!moved) return 1;
-    out(`[ok] moved ${baseName(item)}: todo → in-progress`);
+    okLine(`moved ${baseName(item)}: todo → in-progress`);
     printNext([
       ...hooksFor(ipTpl, "post-enter"),
       ...hooksFor(todoTpl, "post-exit"),
@@ -367,7 +381,7 @@ function doneCmd(args: string[]): Promise<number> {
     if (!ok) return 1;
     const moved = moveWithAppend(item, joinPath(root, DONE), doneTpl, "done");
     if (!moved) return 1;
-    out(`[ok] moved ${baseName(item)}: in-progress → done`);
+    okLine(`moved ${baseName(item)}: in-progress → done`);
     printNext([
       ...hooksFor(doneTpl, "post-enter"),
       ...hooksFor(ipTpl, "post-exit"),

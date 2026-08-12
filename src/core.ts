@@ -89,8 +89,9 @@ function trimLines(lines: string[]): string {
 
 function extractBlock(lines: string[], i: number): string {
   const level = headingLevel(lines[i]);
+  const out: string[] = [];
   if (level > 0) {
-    const out = [lines[i].replace(HOOK_RE, "").trim()];
+    out.push(lines[i]);
     for (let j = i + 1; j < lines.length; j++) {
       const l = lines[j];
       const lvl = headingLevel(l);
@@ -101,14 +102,19 @@ function extractBlock(lines: string[], i: number): string {
     return trimLines(out);
   }
 
+  // Inline hook: expand back over the paragraph, forward to the next heading
+  // or hook marker, preserving interior blank lines so lists and paragraphs
+  // after a lead-in line are kept.
   let start = i;
   while (start > 0 && isBodyLine(lines[start - 1])) start--;
   let end = i;
-  while (end + 1 < lines.length && isBodyLine(lines[end + 1])) end++;
-  const out: string[] = [];
-  for (let j = start; j <= end; j++) {
-    out.push(j === i ? lines[j].replace(HOOK_RE, "").trim() : lines[j]);
+  while (end + 1 < lines.length) {
+    const l = lines[end + 1];
+    if (headingLevel(l) > 0) break;
+    if (HOOK_RE.test(l)) break;
+    end++;
   }
+  for (let j = start; j <= end; j++) out.push(lines[j]);
   return trimLines(out);
 }
 
