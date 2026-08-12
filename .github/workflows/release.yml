@@ -43,6 +43,13 @@ jobs:
             --env="$PWD/.env.backlog" \
             --output "dist/backlog-${{ matrix.suffix }}" \
             mod.ts
+      # Apple Silicon requires every Mach-O to carry at least an ad-hoc
+      # signature. Ad-hoc signing lifts Gatekeeper from "refuse" to the
+      # standard "unidentified developer" dialog, restoring the right-click
+      # → Open bypass for quarantined downloads.
+      - name: Ad-hoc codesign (macOS only)
+        if: contains(matrix.target, 'apple-darwin')
+        run: codesign -s - "dist/backlog-${{ matrix.suffix }}"
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
