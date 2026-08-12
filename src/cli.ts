@@ -256,11 +256,18 @@ function newCmd(args: string[]): Promise<number> {
   });
 }
 
+// Only real increments (NNNNN-slug.md) are selectable so `.gitkeep` sentinels
+// and other non-increment files never count toward ambiguity.
+function selectable(files: string[]): string[] {
+  return files.filter((f) => idFromFile(f) !== null);
+}
+
 function resolveOne(
   files: string[],
   query: string | undefined,
   label: string,
 ): string | null {
+  files = selectable(files);
   if (query !== undefined) {
     const cands = files.filter((f) => matches(f, query));
     if (cands.length === 0) {

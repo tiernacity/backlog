@@ -19,17 +19,20 @@ and any solo-item selection.
 
 ### Done When
 
-- [ ] With a single in-progress increment (plus `.gitkeep`), `backlog done`
+- [x] With a single in-progress increment (plus `.gitkeep`), `backlog done`
       with no argument moves it without error.
-- [ ] `backlog start` works for a single todo increment (plus `.gitkeep`).
-- [ ] `.gitkeep` sentinels are never offered as selectable increments or
+- [x] `backlog start` works for a single todo increment (plus `.gitkeep`).
+- [x] `.gitkeep` sentinels are never offered as selectable increments or
       reported as ambiguous.
-- [ ] Multiple real increments still require an explicit argument.
+- [x] Multiple real increments still require an explicit argument.
 
 ### Uncertainties
 
-- [ ] Whether selection filtering should exclude only `.gitkeep` or any
+- [x] Whether selection filtering should exclude only `.gitkeep` or any
       non-increment file in the state dirs.
+
+      Resolved: filter by `idFromFile(f) !== null`, i.e. any non-increment
+      file, not just `.gitkeep`.
 
 ### Notes and analysis
 
@@ -50,15 +53,21 @@ file before moving to in-progress.
 
 ## Implementation Plan
 
-TODO: Fill in the Implementation Plan with phases and tests.
-
 ### Phase 1
 
-- [ ] TODO
+- [x] Add `selectable(files)` in src/cli.ts that filters to real increments
+      (`idFromFile(f) !== null`), excluding `.gitkeep` and any other
+      non-increment file.
+- [x] Call `selectable` at the top of `resolveOne` so both query and solo
+      selection ignore non-increment files.
 
 #### Tests
 
-- [ ] TODO
+- [x] `deno check mod.ts`, `deno test` (17 pass), `deno fmt --check`, `deno lint`.
+- [x] Behavioral: `backlog done` (no arg) completed the solo in-progress
+      increment alongside `.gitkeep`.
+- [x] Behavioral: `backlog start` (no arg) errors on multiple real todo
+      increments (correctly still requires explicit arg).
 
 ### Guidance [hook: post-enter]
 
@@ -72,3 +81,15 @@ proceeds.
 
 - Done When criteria are met, and Test criteria are passing and demonstrated
 - Commit the file before moving to done.
+
+## Guidance [hook: post-enter]
+
+This increment is _done_ on its topic branch. To integrate into `main`
+with human approval required before merging:
+
+- After the `done` file is committed on the topic branch, get approval to merge.
+- The user/agent then merges with `--no-ff` into `main`:
+  `git switch main && git merge --no-ff <branch>`
+- Then remove the feature branch
+- MUST: get approval before merging into `main`.
+- `main` only receives an increment via `merge --no-ff`.
