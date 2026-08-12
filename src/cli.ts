@@ -9,8 +9,8 @@ import {
   matches,
   nextId,
   recentDone,
-  slugFromFile,
   slugify,
+  sortByIdAsc,
   TODO,
 } from "./core.ts";
 import {
@@ -472,28 +472,28 @@ function listCmd(args: string[]): number {
     }
   }
 
-  const filter = (f: string): boolean =>
-    (!grep || grep.test(baseName(withoutExt(f)))) && idFromFile(f) !== null;
-
-  const sortBySlug = (fs: string[]): string[] =>
-    fs.sort((a, b) => slugFromFile(a).localeCompare(slugFromFile(b)));
+  const filter = (f: string): boolean => {
+    if (idFromFile(f) === null) return false;
+    if (!grep) return true;
+    if (grep.test(baseName(withoutExt(f)))) return true;
+    return grep.test(readText(f));
+  };
 
   const root = backlogRoot();
   const show = (label: string, items: string[]): void => {
-    out(`${label}:`);
-    for (const item of items) out(`  ${baseName(item)}`);
+    for (const item of items) out(`${label}/${baseName(item)}`);
   };
 
-  const inProgress = sortBySlug(
+  const inProgress = sortByIdAsc(
     listFiles(joinPath(root, IN_PROGRESS)).filter(filter),
   );
-  const todo = sortBySlug(listFiles(joinPath(root, TODO)).filter(filter));
-  show("in-progress", inProgress);
-  show("todo", todo);
+  const todo = sortByIdAsc(listFiles(joinPath(root, TODO)).filter(filter));
+  show(IN_PROGRESS, inProgress);
+  show(TODO, todo);
   if (showDone) {
-    let done = sortBySlug(listFiles(joinPath(root, DONE)).filter(filter));
+    let done = sortByIdAsc(listFiles(joinPath(root, DONE)).filter(filter));
     if (!allDone) done = recentDone(done, 5);
-    show("done", done);
+    show(DONE, done);
   }
   return 0;
 }
@@ -564,7 +564,8 @@ const SUBHELP: Record<string, string> = {
   list: `backlog list [--done [--all]] [--grep <regex>]
   Shows in-progress, then todo (each sorted by slug). --done appends the 5
   most recent done increments; --done --all shows every done increment.
-  --grep filters each filename (slug) by a regular expression.`,
+  --grep filters each increment by a regular expression matching its
+  filename (slug) or file contents.`,
   help: `backlog help [--short]
   Prints workflow + usage. --short adds \"run backlog help now\".`,
   "--version": `backlog --version
