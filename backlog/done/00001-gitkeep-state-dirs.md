@@ -19,12 +19,12 @@ behaviour and keeping `init` idempotent.
 
 ### Done When
 
-- [ ] `backlog init` creates `backlog/todo/.gitkeep`, `backlog/in-progress/.gitkeep`,
+- [x] `backlog init` creates `backlog/todo/.gitkeep`, `backlog/in-progress/.gitkeep`,
       and `backlog/done/.gitkeep`.
-- [ ] Re-running `backlog init` when the `.gitkeep` files exist is a no-op for them
+- [x] Re-running `backlog init` when the `.gitkeep` files exist is a no-op for them
       (idempotent, no error, no overwrite).
-- [ ] An existing `.gitkeep` with user content is left unchanged.
-- [ ] Templates are still seeded as before.
+- [x] An existing `.gitkeep` with user content is left unchanged.
+- [x] Templates are still seeded as before.
 
 ### Uncertainties
 
@@ -55,3 +55,49 @@ Workflow — semi-linear `main`:
 [hook: pre-exit] This increment is _ready for in-progress_ only when the Done
 When criteria are complete and approved, and the file is committed. Commit the
 file before moving to in-progress.
+
+## Implementation Plan
+
+Add a `.gitkeep` guard file in each state dir during `init`, guarded by
+`exists()` so it is idempotent and never overwrites user content.
+
+### Phase 1
+
+- [x] Add STORE_GITKEEP(state) helper: `backlog/<state>/.gitkeep`
+- [x] In initCmd()'s state-dir loop, create `.gitkeep` (empty) unless present
+
+#### Tests
+
+- [x] Manual: init in a fresh repo creates all three `.gitkeep` files
+- [x] Manual: re-run init leaves existing `.gitkeep` untouched (idempotent)
+- [x] Manual: a `.gitkeep` with user content is preserved
+- [x] `deno check`, `deno lint`, `deno fmt --check`, `deno test` all pass
+
+### Guidance [hook: post-enter]
+
+This increment is now on a topic branch; work continues on that branch only.
+Do not commit to `main`.
+
+Create the branch covering the moved increment file (unless it already lives
+on a branch), commit the move, then work through the Done When checklist and
+the Implementation Plan, committing as you go.
+
+- MUST: the increment is committed, on a branch other than `main`.
+- The user MAY have already created the branch and committed the file.
+
+[hook: pre-exit] This increment is _ready for done_ only when:
+- Done When criteria are met, and Test criteria are passing and demonstrated;
+- the increment is committed on a branch (not `main`).
+
+Commit the file before moving to done.
+
+## Guidance [hook: post-enter]
+
+This increment is _done_ on its topic branch. To integrate into `main`
+(semi-linear), with human approval required before merging:
+
+- After the `done` move is committed on the topic branch, get approval to merge.
+- The user/agent then merges with `--no-ff` into `main`:
+  `git switch main && git merge --no-ff <branch>`
+- MUST: get approval before merging into `main`.
+- Leave `main` linear; `main` only receives an increment via `merge --no-ff`.
