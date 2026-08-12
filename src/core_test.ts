@@ -53,6 +53,37 @@ Deno.test("matches resolves by number, slug, or filename", () => {
   assertEquals(matches(f, ""), false);
 });
 
+Deno.test("matches is case-insensitive", () => {
+  const f = "backlog/todo/00003-TMDB-Integration.md";
+  assertEquals(matches(f, "tmdb"), true);
+  assertEquals(matches(f, "TMDB"), true);
+  assertEquals(matches(f, "00003-tmdb"), true);
+});
+
+Deno.test("matches a unique slug prefix", () => {
+  const f = "backlog/todo/00003-tmdb-integration.md";
+  assertEquals(matches(f, "tmdb"), true);
+  assertEquals(matches(f, "tmdb-int"), true);
+  // A leaf equality still holds.
+  assertEquals(matches(f, "tmdb-integration"), true);
+});
+
+Deno.test("matches leading id alone or with a slug fragment", () => {
+  const f = "backlog/todo/00003-tmdb-integration.md";
+  assertEquals(matches(f, "3-tmdb"), true);
+  assertEquals(matches(f, "00003-tmdb"), true);
+  // Wrong id short-circuits even with a matching slug fragment.
+  assertEquals(matches(f, "4-tmdb"), false);
+  // A numeric query must not prefix-match an unrelated slug.
+  assertEquals(matches(f, "3"), true);
+});
+
+Deno.test("matches a non-prefix substring of the slug", () => {
+  const f = "backlog/todo/00003-tmdb-integration.md";
+  // "tegration" is not a prefix of the slug.
+  assertEquals(matches(f, "tegration"), false);
+});
+
 Deno.test("extractHooks pulls a section from a header hook and keeps the tag", () => {
   const tpl =
     `## Ship Criteria [hook: pre-exit]\n\n- [ ] a\n- [ ] b\n\n## Other\nx`;
