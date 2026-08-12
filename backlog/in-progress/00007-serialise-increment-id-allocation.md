@@ -111,15 +111,23 @@ file before moving to in-progress.
 
 ## Implementation Plan
 
-TODO: Fill in the Implementation Plan with phases and tests.
+### Phase 1 — exclusive lock around id allocation
 
-### Phase 1
-
-- [ ] TODO
+- [x] `src/fs.ts`: add `withLock<T>(path, fn)` that takes an exclusive advisory
+      lock (`FsFile.lockSync(true)`) around `fn` and always unlocks/close.
+- [x] `src/cli.ts` `newCmd`: move id computation + write inside
+      `withLock(backlog/.lock, ...)`, so `nextId` reads a consistent file view.
+- [x] `initCmd`: seed `backlog/.gitignore` with `.lock` so the lock file is
+      never committed.
+- [x] Update `new` subhelp to note serialised allocation.
 
 #### Tests
 
-- [ ] TODO
+- [x] Existing suite passes (17 passed / 0 failed); `deno check`/`lint`/`fmt` clean.
+- [x] Manual concurrency probe: 10 parallel `backlog new` (different names)
+      produced ids 00002..00011, no duplicates, no clobbering.
+- [x] Solo `backlog new` still numbers max+1 (00001 seed -> 00012 next).
+- [x] `backlog/.lock` is created and git-ignored.
 
 ### Guidance [hook: post-enter]
 

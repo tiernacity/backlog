@@ -73,6 +73,19 @@ export function plainMv(src: string, dst: string): void {
   Deno.renameSync(src, dst);
 }
 
+/** Runs `fn` while holding an exclusive advisory lock on `path`. */
+export function withLock<T>(path: string, fn: () => T): T {
+  ensureDir(dirName(path));
+  const f = Deno.openSync(path, { read: true, write: true, create: true });
+  f.lockSync(true); // exclusive; blocks until acquired
+  try {
+    return fn();
+  } finally {
+    f.unlockSync();
+    f.close();
+  }
+}
+
 export function defaultTemplateUrl(state: string): URL {
   const name = TEMPLATE_NAME[state];
   // `./` from ./src/fs.ts reaches src/ (source), and the bundle root when
