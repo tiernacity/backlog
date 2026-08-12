@@ -109,19 +109,26 @@ function hooksFor(tpl: string | null, name: string): string[] {
 }
 
 function printNext(contents: string[]): void {
-  for (const content of contents) {
+  if (!contents.length) return;
+  out("");
+  const blocks = contents.filter((c) => c.trim());
+  blocks.forEach((content, i) => {
+    if (i > 0) out("---");
     for (const ln of content.split("\n")) {
-      if (ln.trim()) out(`next: ${ln.trim()}`);
+      if (ln.trim()) out(ln.trim());
     }
-  }
+  });
+  out("");
 }
 
 function printGates(contents: string[]): void {
-  for (const content of contents) {
+  const blocks = contents.filter((c) => c.trim());
+  blocks.forEach((content, i) => {
+    if (i > 0) out("---");
     for (const ln of content.split("\n")) {
-      if (ln.trim()) out(`confirm: ${ln.trim()}`);
+      if (ln.trim()) out(ln.trim());
     }
-  }
+  });
 }
 
 async function confirm(lines: string[], yes: boolean): Promise<boolean> {
@@ -178,22 +185,21 @@ function initCmd(): number {
     writeText(tplPath, readText(defaultTemplateUrl(state)));
     out(`[ok] seeded ${name}`);
   }
+  out("");
   out(
-    `next: ${STORE}/ now holds your workflow — three templates and three state dirs`,
+    `${STORE}/ now holds your workflow — three templates and three state dirs`,
   );
+  out('resolve every "WORKFLOW" marker in the templates now (one-time policy)');
   out(
-    `next: resolve every \"WORKFLOW\" marker in the templates now (one-time policy)`,
+    "templates may also gain extra [hook: <name>]s to gate or guide transitions",
   );
+  out("  see `backlog help` (HOOKS section) for hook names & semantics");
+  out("---");
+  out(`commit the shaped templates:  git add ${STORE} && git commit`);
   out(
-    "next: templates may also gain extra [hook: <name>]s to gate or guide transitions",
+    "then increments flow: `backlog new <name>` → fill it in → `backlog start` → `backlog done`",
   );
-  out("next:   see `backlog help` (HOOKS section) for hook names & semantics");
-  out(
-    `next: once templates are shaped, commit them:  git add ${STORE} && git commit`,
-  );
-  out(
-    "next: then increments flow: `backlog new <name>` → fill it in → `backlog start` → `backlog done`",
-  );
+  out("");
   return 0;
 }
 
@@ -225,6 +231,11 @@ function newCmd(args: string[]): Promise<number> {
     if (!ok) return 1;
     writeText(target, todoTpl);
     out(`[ok] created ${STORE_DIR(TODO)}${baseName(target)}`);
+    out(
+      `fill out the increment, then commit it before moving it on:  git add ${
+        STORE_DIR(TODO)
+      }${baseName(target)} && git commit`,
+    );
     printNext(hooksFor(todoTpl, "post-enter"));
     return 0;
   });
@@ -274,12 +285,18 @@ function moveWithAppend(
   src: string,
   dstDir: string,
   tpl: string | null,
+  cmd: string,
 ): string | null {
   const name = baseName(src);
   const dst = joinPath(dstDir, name);
   if (isGitRepo()) {
     if (!gitMv(src, dst)) {
-      err(`failed to move ${name} with git mv — is it committed?`);
+      err(
+        `cannot move ${name} with git mv — the increment is not under version`,
+      );
+      err(`control. Commit it first, then re-run \`backlog ${cmd}\`:`);
+      err(`  git add ${src.replace(/.*\/backlog\//, "backlog/")}`);
+      err("  git commit -m <message>");
       return null;
     }
   } else {
@@ -313,7 +330,12 @@ function startCmd(args: string[]): Promise<number> {
   ];
   return confirm(gates, flags.yes).then((ok) => {
     if (!ok) return 1;
-    const moved = moveWithAppend(item, joinPath(root, IN_PROGRESS), ipTpl);
+    const moved = moveWithAppend(
+      item,
+      joinPath(root, IN_PROGRESS),
+      ipTpl,
+      "start",
+    );
     if (!moved) return 1;
     out(`[ok] moved ${baseName(item)}: todo → in-progress`);
     printNext([
@@ -343,7 +365,7 @@ function doneCmd(args: string[]): Promise<number> {
   ];
   return confirm(gates, flags.yes).then((ok) => {
     if (!ok) return 1;
-    const moved = moveWithAppend(item, joinPath(root, DONE), doneTpl);
+    const moved = moveWithAppend(item, joinPath(root, DONE), doneTpl, "done");
     if (!moved) return 1;
     out(`[ok] moved ${baseName(item)}: in-progress → done`);
     printNext([
