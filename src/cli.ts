@@ -50,6 +50,9 @@ const STORE = "backlog";
 const STORE_DIR = (state: string): string => `${STORE}/${state}/`;
 const STORE_TEMPLATE = (state: string): string => `${STORE}/.${state}.md`;
 const STORE_GITKEEP = (state: string): string => `${STORE}/${state}/.gitkeep`;
+const STORE_GITIGNORE = ".gitignore";
+// Runtime-only files inside the backlog dir that must never be committed.
+const STORE_IGNORED = ".lock\n";
 
 const HEADLINE =
   `Use \`backlog\` for task workflow support. Manage an increment from todo → in-progress → done
@@ -214,6 +217,11 @@ function initCmd(): number {
     }
     writeText(tplPath, readText(defaultTemplateUrl(state)));
     okLine(`seeded ${name}`);
+  }
+  const gitignorePath = joinPath(root, STORE_GITIGNORE);
+  if (!exists(gitignorePath)) {
+    writeText(gitignorePath, STORE_IGNORED);
+    okLine(`created ${STORE_GITIGNORE} (ignores runtime files)`);
   }
   out(
     `${STORE}/ now holds your workflow — three templates and three state dirs`,
