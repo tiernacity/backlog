@@ -31,25 +31,23 @@ reported as ambiguous, not silently resolved.
 
 ### Done When
 
-- [ ] `backlog start -y <prefix>` starts a todo increment whose slug starts
+- [x] `backlog start -y <prefix>` starts a todo increment whose slug starts
       with that prefix, when the prefix is unique.
-- [ ] `backlog start -y <number>-<partial-slug>` matches when unique.
-- [ ] `backlog start -y beta` does NOT fail on the exact failing case from
+- [x] `backlog start -y <number>-<partial-slug>` matches when unique.
+- [x] `backlog start -y beta` does NOT fail on the exact failing case from
       feedback (a slug genuinely starting with `beta` gets matched).
-- [ ] A non-unique prefix reports the ambiguous candidates rather than
+- [x] A non-unique prefix reports the ambiguous candidates rather than
       picking one.
-- [ ] Exact id / exact slug / full filename matches still work as before
+- [x] Exact id / exact slug / full filename matches still work as before
       (backward compatible).
 
 ### Uncertainties
 
-- [ ] Whether to match prefix (e.g. `tmdb` → `tmdb-integration`) or partial
-      substring anywhere in the slug. Prefix is cheap and low-surprise; open
-      to substring if feedback wants it.
-- [ ] How far a query before a `-` boundary counts (e.g. `3-tmdb`). The
-      leading numeric token must always be treated as an id when present.
-- [ ] Whether multi-word matching (lowercased, hyphen-insensitive) is worth it
-      (`3 tmdb` ← `3-tmdb`).
+- [x] Prefix matching (not substring) was chosen. Cheap and low-surprise;
+      substring can follow if feedback wants it.
+- [x] A leading numeric token before a `-` is always treated as the id.
+- [ ] Multi-word matching (hyphen-insensitive) was not built — not requested
+      and low value; `new` auto-slugs to kebab-case anyway.
 
 ### Notes and analysis
 
@@ -88,15 +86,22 @@ WORKFLOW: decide this repo's branching/commit/PR requirements
 
 ## Implementation Plan
 
-TODO: Fill in the Implementation Plan with phases and tests.
+### Phase 1 — prefix-aware matching
 
-### Phase 1
-
-- [ ] TODO
+- [x] Rewrote `matches()` in `src/core.ts` to resolve the query in order:
+      exact filename, exact slug, leading numeric id token, then slug-prefix.
+- [x] Multiple exact-match paths (filename / slug / number) are kept for
+      backward compatibility.
+- [x] `resolveOne()` in `src/cli.ts` was relied on unchanged for the
+      unique-vs-ambiguous safety net (ambiguity is reported, not silently
+      resolved).
 
 #### Tests
 
-- [ ] TODO
+- [x] Added `src/core_test.ts` cases: numeric, short numeric, slug prefix
+      unique, leading id + fragment, wrong id short-circuit, non-prefix
+      substring rejection, case-insensitivity.
+- [x] Ran `deno task check` (fmt, lint, typecheck, full suite) — all green.
 
 ### Guidance [hook: post-enter]
 

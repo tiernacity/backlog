@@ -61,15 +61,28 @@ export function nextId(ids: number[]): number {
 }
 
 export function matches(file: string, query: string): boolean {
-  const q = query.trim();
+  const q = query.trim().toLowerCase();
   if (!q) return false;
-  const base = baseName(withoutExt(file));
-  const slug = slugFromFile(file);
+  const base = baseName(withoutExt(file)).toLowerCase();
+  const slug = slugFromFile(file).toLowerCase();
   const id = idFromFile(file);
-  if (base.toLowerCase() === q.toLowerCase()) return true;
-  if (slug.toLowerCase() === q.toLowerCase()) return true;
-  if (/^\d+$/.test(q) && id !== null) return Number(q) === id;
-  return false;
+
+  if (base === q) return true;
+  if (slug === q) return true;
+
+  // A leading numeric token is always treated as the id when present.
+  const sep = q.indexOf("-");
+  const first = sep === -1 ? q : q.slice(0, sep);
+  const rest = sep === -1 ? "" : q.slice(sep + 1);
+  const idPart = /^\d+$/.test(first) ? Number(first) : null;
+  if (idPart !== null) {
+    if (id === null || idPart !== id) return false;
+    return rest === "" || slug.startsWith(rest);
+  }
+
+  // Plain fragment: matched when the target slug starts with it. Uniqueness
+  // is enforced by resolveOne, so an ambiguous prefix stays ambiguous.
+  return slug.startsWith(q);
 }
 
 function headingLevel(line: string): number {
