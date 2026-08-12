@@ -66,10 +66,10 @@ stale lock and no id gap.
 The lock file lives at `backlog/.lock` — a non-`.md` file, so
 `listFiles`/`nextId`/`list` already ignore it.
 
-`initCmd` also creates a `backlog/.gitignore` containing `.lock` (and any other
-runtime-only files) so the lock file is never committed. Creating it (idempotent
-— existing file left unchanged) fits alongside the existing `.gitkeep` seeding
-in `initCmd`.
+`initCmd` also writes `backlog/.gitignore` containing `.lock` (and any other
+runtime-only files) so the lock file is never committed. `init` writes it
+unconditionally — self-healing, so a missing or stale `.gitignore` in a
+pre-existing repo is repaired; git tracks whether the file actually changed.
 
 Why this satisfies the Done When criteria:
 
@@ -117,8 +117,9 @@ file before moving to in-progress.
       lock (`FsFile.lockSync(true)`) around `fn` and always unlocks/close.
 - [x] `src/cli.ts` `newCmd`: move id computation + write inside
       `withLock(backlog/.lock, ...)`, so `nextId` reads a consistent file view.
-- [x] `initCmd`: seed `backlog/.gitignore` with `.lock` so the lock file is
-      never committed.
+- [x] `initCmd`: write `backlog/.gitignore` (self-healing) with `.lock` so the
+      lock file is never committed; repairs missing/stale files in pre-existing
+      repos.
 - [x] Update `new` subhelp to note serialised allocation.
 
 #### Tests

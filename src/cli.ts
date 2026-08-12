@@ -219,11 +219,11 @@ function initCmd(): number {
     writeText(tplPath, readText(defaultTemplateUrl(state)));
     okLine(`seeded ${name}`);
   }
+  // Self-healing: write unconditionally so a missing or stale .gitignore in
+  // pre-existing repos is repaired; git tracks whether it actually changed.
   const gitignorePath = joinPath(root, STORE_GITIGNORE);
-  if (!exists(gitignorePath)) {
-    writeText(gitignorePath, STORE_IGNORED);
-    okLine(`created ${STORE_GITIGNORE} (ignores runtime files)`);
-  }
+  writeText(gitignorePath, STORE_IGNORED);
+  okLine(`wrote ${STORE_GITIGNORE} (ignores runtime files)`);
   out(
     `${STORE}/ now holds your workflow — three templates and three state dirs`,
   );
