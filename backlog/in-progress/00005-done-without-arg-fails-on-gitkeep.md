@@ -47,3 +47,28 @@ Fill out the Goal, Context, and Done When, then commit.
 [hook: pre-exit] This increment is _ready for in-progress_ only when the Done
 When criteria are complete and approved, and the file is committed. Commit the
 file before moving to in-progress.
+
+## Implementation Plan
+
+TODO: Fill in the Implementation Plan with phases and tests.
+
+### Phase 1
+
+- [ ] TODO
+
+#### Tests
+
+- [ ] TODO
+
+### Guidance [hook: post-enter]
+
+Work on this increment MUST be done in a topic branch. If the branch does not already exist
+create it now. Commit the in-progress file to the branch.
+
+Populate the implementation plan and tests, and keep them up-to-date as implementation
+proceeds.
+
+[hook: pre-exit] This increment is _ready for done_ only when:
+
+- Done When criteria are met, and Test criteria are passing and demonstrated
+- Commit the file before moving to done.
