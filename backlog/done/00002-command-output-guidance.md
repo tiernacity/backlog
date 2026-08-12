@@ -22,12 +22,12 @@ hook output. These reduce clarity for both humans and agents.
 
 ### Done When
 
-- [ ] `backlog new` prints a commit instruction as its own output line.
-- [ ] `backlog start`/`done` on an uncommitted increment print a clear, actionable
+- [x] `backlog new` prints a commit instruction as its own output line.
+- [x] `backlog start`/`done` on an uncommitted increment print a clear, actionable
       message (relative path + commands), naming the correct subcommand.
-- [ ] No `next:` / `confirm:` prefixes remain in output; hook guidance prints as
+- [x] No `next:` / `confirm:` prefixes remain in output; hook guidance prints as
       distinct blocks separated by blank lines / a `---` rule.
-- [ ] `deno fmt`, `deno lint`, `deno check`, and `deno test` all pass.
+- [x] `deno fmt`, `deno lint`, `deno check`, and `deno test` all pass.
 
 ### Uncertainties
 
@@ -55,3 +55,50 @@ Workflow — semi-linear `main`:
 [hook: pre-exit] This increment is _ready for in-progress_ only when the Done
 When criteria are complete and approved, and the file is committed. Commit the
 file before moving to in-progress.
+
+## Implementation Plan
+
+### Phase 1
+
+- [x] `printNext`/`printGates` drop `next:`/`confirm:` prefixes
+- [x] Hook blocks separated by blank lines / `---` between blocks
+- [x] `newCmd` emits commit guidance as its own output line
+- [x] `moveWithAppend` takes a `cmd` param; error names subcommand + gives fix
+- [x] `initCmd` step block without `next:` prefix
+- [x] README agent-friendly section updated
+
+#### Tests
+
+- [x] `deno fmt --check`, `deno lint`, `deno check`, `deno test` pass
+- [x] manual: `new` prints commit line; `init` block clean
+- [x] manual: `start`/`done` git-mv error is actionable with correct command
+- [x] manual: multiple post-enter hooks separated by `---`
+
+### Guidance [hook: post-enter]
+
+This increment is now on a topic branch; work continues on that branch only.
+Do not commit to `main`.
+
+Create the branch covering the moved increment file (unless it already lives
+on a branch), commit the move, then work through the Done When checklist and
+the Implementation Plan, committing as you go.
+
+- MUST: the increment is committed, on a branch other than `main`.
+- The user MAY have already created the branch and committed the file.
+
+[hook: pre-exit] This increment is _ready for done_ only when:
+- Done When criteria are met, and Test criteria are passing and demonstrated;
+- the increment is committed on a branch (not `main`).
+
+Commit the file before moving to done.
+
+## Guidance [hook: post-enter]
+
+This increment is _done_ on its topic branch. To integrate into `main`
+(semi-linear), with human approval required before merging:
+
+- After the `done` move is committed on the topic branch, get approval to merge.
+- The user/agent then merges with `--no-ff` into `main`:
+  `git switch main && git merge --no-ff <branch>`
+- MUST: get approval before merging into `main`.
+- Leave `main` linear; `main` only receives an increment via `merge --no-ff`.

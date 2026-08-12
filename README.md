@@ -139,8 +139,8 @@ to preserve file history, and only inside a git repo.
 ## Agent-friendly
 
 - **Stable, parseable stdout.** Facts print as `[ok] …` lines; guidance and
-  gates print with their hook name. Don't swallow stdout, it's part of the
-  workflow.
+  gates print as visually-distinct blocks (separated by blank lines / a `---`
+  rule). Don't swallow stdout, it's part of the workflow.
 - **Non-zero exit code on any failure.**
 - **Lenient `<id-or-name>` matching** (slug, number, or filename).
 - **Self-describing.** `backlog help` covers the workflow; each command's `-h`
