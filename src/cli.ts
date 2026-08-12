@@ -9,8 +9,8 @@ import {
   matches,
   nextId,
   recentDone,
-  slugFromFile,
   slugify,
+  sortByIdAsc,
   TODO,
 } from "./core.ts";
 import {
@@ -475,23 +475,20 @@ function listCmd(args: string[]): number {
   const filter = (f: string): boolean =>
     (!grep || grep.test(baseName(withoutExt(f)))) && idFromFile(f) !== null;
 
-  const sortBySlug = (fs: string[]): string[] =>
-    fs.sort((a, b) => slugFromFile(a).localeCompare(slugFromFile(b)));
-
   const root = backlogRoot();
   const show = (label: string, items: string[]): void => {
     out(`${label}:`);
     for (const item of items) out(`  ${baseName(item)}`);
   };
 
-  const inProgress = sortBySlug(
+  const inProgress = sortByIdAsc(
     listFiles(joinPath(root, IN_PROGRESS)).filter(filter),
   );
-  const todo = sortBySlug(listFiles(joinPath(root, TODO)).filter(filter));
+  const todo = sortByIdAsc(listFiles(joinPath(root, TODO)).filter(filter));
   show("in-progress", inProgress);
   show("todo", todo);
   if (showDone) {
-    let done = sortBySlug(listFiles(joinPath(root, DONE)).filter(filter));
+    let done = sortByIdAsc(listFiles(joinPath(root, DONE)).filter(filter));
     if (!allDone) done = recentDone(done, 5);
     show("done", done);
   }

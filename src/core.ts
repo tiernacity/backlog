@@ -149,3 +149,8 @@ export function recentDone(files: string[], limit: number): string[] {
   return [...files].sort((a, b) => (idFromFile(b) ?? 0) - (idFromFile(a) ?? 0))
     .slice(0, limit);
 }
+
+/** Sorts files by ascending numeric id, independent of slug or readdir order. */
+export function sortByIdAsc(files: string[]): string[] {
+  return [...files].sort((a, b) => (idFromFile(a) ?? 0) - (idFromFile(b) ?? 0));
+}

@@ -8,6 +8,7 @@ import {
   recentDone,
   slugFromFile,
   slugify,
+  sortByIdAsc,
 } from "./core.ts";
 import { assertEquals } from "@std/assert";
 
@@ -156,6 +157,29 @@ Deno.test("appendTemplate appends a section template to task content", () => {
     result,
     `# T\n\n## Goal\n\n## Implementation Plan\n\n- [ ] TODO\n`,
   );
+});
+
+Deno.test("sortByIdAsc sorts padded and short ids ascending numerically", () => {
+  const files = [
+    "backlog/todo/00010-j.md",
+    "backlog/todo/2-b.md",
+    "backlog/todo/00003-c.md",
+    "backlog/todo/11-k.md",
+  ];
+  const result = sortByIdAsc(files);
+  assertEquals(result, [
+    "backlog/todo/2-b.md",
+    "backlog/todo/00003-c.md",
+    "backlog/todo/00010-j.md",
+    "backlog/todo/11-k.md",
+  ]);
+});
+
+Deno.test("sortByIdAsc does not mutate the input", () => {
+  const files = ["backlog/todo/00003-c.md", "backlog/todo/00001-a.md"];
+  const result = sortByIdAsc(files);
+  assertEquals(result, ["backlog/todo/00001-a.md", "backlog/todo/00003-c.md"]);
+  assertEquals(files, ["backlog/todo/00003-c.md", "backlog/todo/00001-a.md"]);
 });
 
 Deno.test("recentDone keeps the newest id first", () => {
