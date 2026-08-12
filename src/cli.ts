@@ -26,6 +26,7 @@ import {
   plainMv,
   readOptional,
   readText,
+  withLock,
   writeText,
 } from "./fs.ts";
 
@@ -50,6 +51,9 @@ const STORE = "backlog";
 const STORE_DIR = (state: string): string => `${STORE}/${state}/`;
 const STORE_TEMPLATE = (state: string): string => `${STORE}/.${state}.md`;
 const STORE_GITKEEP = (state: string): string => `${STORE}/${state}/.gitkeep`;
+const STORE_GITIGNORE = ".gitignore";
+// Runtime-only files inside the backlog dir that must never be committed.
+const STORE_IGNORED = ".lock\n";
 
 const HEADLINE =
   `Use \`backlog\` for task workflow support. Manage an increment from todo → in-progress → done
@@ -215,6 +219,11 @@ function initCmd(): number {
     writeText(tplPath, readText(defaultTemplateUrl(state)));
     okLine(`seeded ${name}`);
   }
+  // Self-healing: write unconditionally so a missing or stale .gitignore in
+  // pre-existing repos is repaired; git tracks whether it actually changed.
+  const gitignorePath = joinPath(root, STORE_GITIGNORE);
+  writeText(gitignorePath, STORE_IGNORED);
+  okLine(`wrote ${STORE_GITIGNORE} (ignores runtime files)`);
   out(
     `${STORE}/ now holds your workflow — three templates and three state dirs`,
   );
@@ -247,18 +256,19 @@ function newCmd(args: string[]): Promise<number> {
   }
   const todoTpl = readText(templatePath);
   const slug = slugify(nameArgs.join(" "));
-  const existing = listFiles(backlogRoot()).filter(
-    (f) => f.endsWith(".md") && idFromFile(f) !== null,
-  );
-  const id = nextId(existing.map((f) => idFromFile(f) as number));
-  const target = joinPath(todoDir, fileName(id, slug));
-  if (exists(target)) {
-    err(`increment ${baseName(target)} already exists`);
-    return Promise.resolve(1);
-  }
   return confirm(hooksFor(todoTpl, "pre-enter"), yes).then((ok) => {
     if (!ok) return 1;
-    writeText(target, todoTpl);
+    // Serialise id allocation under an exclusive lock so concurrent `new`
+    // runs compute max+1 from a consistent view of the files.
+    const target = withLock(joinPath(backlogRoot(), ".lock"), () => {
+      const existing = listFiles(backlogRoot()).filter(
+        (f) => f.endsWith(".md") && idFromFile(f) !== null,
+      );
+      const id = nextId(existing.map((f) => idFromFile(f) as number));
+      const t = joinPath(todoDir, fileName(id, slug));
+      writeText(t, todoTpl);
+      return t;
+    });
     okLine(`created ${STORE_DIR(TODO)}${baseName(target)}`);
     outLn(
       `fill out the increment, then commit it before moving it on:  git add ${
@@ -531,7 +541,9 @@ const SUBHELP: Record<string, string> = {
   new: `backlog new <name> [-y]
   Drafts a numbered increment in ${STORE_DIR(TODO)}. The name is slugified
   (lowercase, kebab-case) and prefixed with the next 5-digit sequence number
-  (global max+1 across ${STORE}/**/*.md, starting at 00001). The increment is
+  (global max+1 across ${STORE}/**/*.md, starting at 00001). Allocation is
+  serialised under an exclusive lock on ${STORE}/.lock so concurrent runs never
+  collide. The increment is
   scaffolded from ${STORE_TEMPLATE(TODO)}, which may include [hook: pre-enter]
   and [hook: post-enter] entries. -y skips the pre-enter gate (non-interactive).`,
   start: `backlog start [-y] [<id-or-name>]
