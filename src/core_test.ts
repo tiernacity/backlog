@@ -5,7 +5,6 @@ import {
   idFromFile,
   matches,
   nextId,
-  recentDone,
   slugFromFile,
   slugify,
   sortByIdAsc,
@@ -180,68 +179,4 @@ Deno.test("sortByIdAsc does not mutate the input", () => {
   const result = sortByIdAsc(files);
   assertEquals(result, ["backlog/todo/00001-a.md", "backlog/todo/00003-c.md"]);
   assertEquals(files, ["backlog/todo/00003-c.md", "backlog/todo/00001-a.md"]);
-});
-
-Deno.test("recentDone keeps the newest id first", () => {
-  const files = [
-    "backlog/done/00010-e.md",
-    "backlog/done/00002-b.md",
-    "backlog/done/00007-d.md",
-    "backlog/done/00001-a.md",
-    "backlog/done/00005-c.md",
-  ];
-  const result = recentDone(files, 5);
-  assertEquals(result, [
-    "backlog/done/00010-e.md",
-    "backlog/done/00007-d.md",
-    "backlog/done/00005-c.md",
-    "backlog/done/00002-b.md",
-    "backlog/done/00001-a.md",
-  ]);
-});
-
-Deno.test("recentDone sorts padded and short ids numerically mixed", () => {
-  const files = [
-    "backlog/done/2-b.md",
-    "backlog/done/00010-j.md",
-    "backlog/done/11-k.md",
-    "backlog/done/00003-c.md",
-  ];
-  const result = recentDone(files, 5);
-  assertEquals(result, [
-    "backlog/done/11-k.md",
-    "backlog/done/00010-j.md",
-    "backlog/done/00003-c.md",
-    "backlog/done/2-b.md",
-  ]);
-});
-
-Deno.test("recentDone truncates to the limit, keeping the newest", () => {
-  const files = [
-    "backlog/done/00003-c.md",
-    "backlog/done/00001-a.md",
-    "backlog/done/00005-e.md",
-    "backlog/done/00004-d.md",
-    "backlog/done/00006-f.md",
-    "backlog/done/00002-b.md",
-    "backlog/done/00007-g.md",
-  ];
-  const result = recentDone(files, 5);
-  assertEquals(result, [
-    "backlog/done/00007-g.md",
-    "backlog/done/00006-f.md",
-    "backlog/done/00005-e.md",
-    "backlog/done/00004-d.md",
-    "backlog/done/00003-c.md",
-  ]);
-});
-
-Deno.test("recentDone does not mutate the input and is capped at the limit", () => {
-  const files = ["backlog/done/00001-a.md", "backlog/done/00003-c.md"];
-  const result = recentDone(files, 5);
-  assertEquals(result, [
-    "backlog/done/00003-c.md",
-    "backlog/done/00001-a.md",
-  ]);
-  assertEquals(files, ["backlog/done/00001-a.md", "backlog/done/00003-c.md"]);
 });

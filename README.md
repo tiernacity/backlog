@@ -124,12 +124,13 @@ a git repo. Fires `in-progress` exit hooks, then `done` enter hooks.
 `<id-or-name>` is optional — implied when it's the only item in the source
 directory.
 
-### `backlog list [--done [--all]] [--grep <regex>]`
+### `backlog list [--done] [--grep <regex>]`
 
 Lists increments one per line as `state/<filename>`, sorted by ascending id. By
-default shows `in-progress/` then `todo/`. `--done` adds the newest items from
-`done/`; `--done --all` shows all of `done/`. `--grep <regex>` filters by an
-increment's filename (slug) or its file contents.
+default shows `in-progress/` then `todo/`. `--done` appends every increment from
+`done/`, also ascending (there is no `--all` flag — `--done` already lists
+everything). `--grep <regex>` filters by an increment's filename (slug) or its
+file contents.
 
 ### `backlog help [--short]`
 

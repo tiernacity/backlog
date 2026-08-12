@@ -73,7 +73,10 @@ export function plainMv(src: string, dst: string): void {
   Deno.renameSync(src, dst);
 }
 
-/** Runs `fn` while holding an exclusive advisory lock on `path`. */
+/** Runs `fn` while holding an exclusive advisory lock on `path`. Removes the
+ * lock file on release (holder-only) so no `.lock` lingers; a waiter must not
+ * unlink. POSIX keeps the inode alive for a waiter's open fd, so this is safe
+ * under concurrent processes. */
 export function withLock<T>(path: string, fn: () => T): T {
   ensureDir(dirName(path));
   const f = Deno.openSync(path, { read: true, write: true, create: true });
@@ -83,6 +86,11 @@ export function withLock<T>(path: string, fn: () => T): T {
   } finally {
     f.unlockSync();
     f.close();
+    try {
+      Deno.removeSync(path);
+    } catch {
+      // already gone (e.g. recreated by a newer holder)
+    }
   }
 }
 

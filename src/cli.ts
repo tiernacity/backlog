@@ -8,7 +8,6 @@ import {
   IN_PROGRESS,
   matches,
   nextId,
-  recentDone,
   slugify,
   sortByIdAsc,
   TODO,
@@ -67,7 +66,7 @@ USAGE
   backlog new <name>
   backlog start [-y] [<id-or-name>]
   backlog done [-y] [<id-or-name>]
-  backlog list [--done [--all]] [--grep <regex>]
+  backlog list [--done] [--grep <regex>]
   backlog help [--short]
   backlog --version
 
@@ -453,12 +452,10 @@ function parseSelect(args: string[]): {
 
 function listCmd(args: string[]): number {
   let showDone = false;
-  let allDone = false;
   let grep: RegExp | null = null;
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (a === "--done") showDone = true;
-    else if (a === "--all") allDone = true;
     else if (a === "--grep") {
       grep = parseGrep(args[i + 1]);
       if (!grep) return 1;
@@ -491,9 +488,7 @@ function listCmd(args: string[]): number {
   show(IN_PROGRESS, inProgress);
   show(TODO, todo);
   if (showDone) {
-    let done = sortByIdAsc(listFiles(joinPath(root, DONE)).filter(filter));
-    if (!allDone) done = recentDone(done, 5);
-    show(DONE, done);
+    show(DONE, sortByIdAsc(listFiles(joinPath(root, DONE)).filter(filter)));
   }
   return 0;
 }
@@ -561,11 +556,11 @@ const SUBHELP: Record<string, string> = {
     )
   }, and moves the file. done is terminal: its
   exit hooks never fire.`,
-  list: `backlog list [--done [--all]] [--grep <regex>]
-  Shows in-progress, then todo (each sorted by slug). --done appends the 5
-  most recent done increments; --done --all shows every done increment.
-  --grep filters each increment by a regular expression matching its
-  filename (slug) or file contents.`,
+  list: `backlog list [--done] [--grep <regex>]
+  Shows in-progress, then todo, each sorted by ascending numeric id. --done
+  appends every done increment (also ascending; there is no --all flag —
+  --done already lists everything). --grep filters each increment by a
+  regular expression matching its filename (slug) or file contents.`,
   help: `backlog help [--short]
   Prints workflow + usage. --short adds \"run backlog help now\".`,
   "--version": `backlog --version
