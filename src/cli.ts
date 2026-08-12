@@ -43,6 +43,8 @@ WORKFLOW
   2. backlog start idea   → moves to in-progress/ (git mv)
   3. backlog done idea    → moves to done/ (git mv, verified)
 Commits are yours — backlog only moves files.
+Hooks on *templates* gate each move; but are useful context in increment files, so don't remove them.
+Don't swallow backlog stdout — it carries workflow guidance for humans and agents.
 Install: ${RELEASE_URL}`;
 
 const out = (s: string): void => {
@@ -59,7 +61,9 @@ function backlogRoot(): string {
 
 function hooksFor(tpl: string | null, name: string): string[] {
   if (!tpl) return [];
-  return extractHooks(tpl).filter((h) => h.name === name).map((h) => h.content);
+  return extractHooks(tpl)
+    .filter((h) => h.name === name)
+    .map((h) => h.content);
 }
 
 function printNext(contents: string[]): void {
@@ -148,8 +152,9 @@ function newCmd(args: string[]): Promise<number> {
   }
   const todoTpl = readText(templatePath);
   const slug = slugify(nameArgs.join(" "));
-  const existing = listFiles(backlogRoot())
-    .filter((f) => f.endsWith(".md") && idFromFile(f) !== null);
+  const existing = listFiles(backlogRoot()).filter(
+    (f) => f.endsWith(".md") && idFromFile(f) !== null,
+  );
   const id = nextId(existing.map((f) => idFromFile(f) as number));
   const target = joinPath(todoDir, fileName(id, slug));
   if (exists(target)) {
@@ -178,9 +183,9 @@ function resolveOne(
     }
     if (cands.length > 1) {
       err(
-        `ambiguous match in ${label}; be more specific: ${
-          cands.map(baseName).join(", ")
-        }`,
+        `ambiguous match in ${label}; be more specific: ${cands
+          .map(baseName)
+          .join(", ")}`,
       );
       return null;
     }
@@ -192,9 +197,9 @@ function resolveOne(
   }
   if (files.length > 1) {
     err(
-      `multiple items in ${label}; specify one: ${
-        files.map(baseName).join(", ")
-      }`,
+      `multiple items in ${label}; specify one: ${files
+        .map(baseName)
+        .join(", ")}`,
     );
     return null;
   }
@@ -280,9 +285,11 @@ function doneCmd(args: string[]): Promise<number> {
   });
 }
 
-function parseSelect(
-  args: string[],
-): { yes: boolean; query?: string; error?: string } {
+function parseSelect(args: string[]): {
+  yes: boolean;
+  query?: string;
+  error?: string;
+} {
   let yes = false;
   const positional: string[] = [];
   for (const a of args) {
