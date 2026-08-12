@@ -23,13 +23,13 @@ Three output rough edges when exercising the workflow by hand:
 
 ### Done When
 
-- [ ] `[ok]`/status lines are followed by a blank line in command output.
-- [ ] Hook content is rendered with the `[hook: ...]` tag left in place,
+- [x] `[ok]`/status lines are followed by a blank line in command output.
+- [x] Hook content is rendered with the `[hook: ...]` tag left in place,
       consistently across all render sites.
-- [ ] Hook blocks preserve blank lines, so inline bullet lists (after a
+- [x] Hook blocks preserve blank lines, so inline bullet lists (after a
       lead-in line) and multi-paragraph content render correctly, in both
       gates (pre-hook confirm) and guidance (post-enter/post-exit).
-- [ ] Existing workflow still behaves correctly for template-based hooks in
+- [x] Existing workflow still behaves correctly for template-based hooks in
       the seeded templates.
 
 ### Uncertainties
@@ -66,27 +66,27 @@ file before moving to in-progress.
 
 ### Phase 1 — parser: contiguous hook blocks & keep tag
 
-- [ ] `extractBlock`: inline hooks run until next `[hook:]` or a heading,
+- [x] `extractBlock`: inline hooks run until next `[hook:]` or a heading,
       preserving interior blank lines.
-- [ ] Do not strip the `[hook:]` tag from the hook line (heading or inline).
+- [x] Do not strip the `[hook:]` tag from the hook line (heading or inline).
 
 #### Tests
 
-- [ ] Inline hook with a lead-in line + trailing bullets keeps all lines.
-- [ ] Inline hook containing a blank line keeps both paragraphs.
-- [ ] Heading hook still extracts under `### Guidance [hook: ...]`.
-- [ ] Hook line keeps its `[hook: ...]` tag in content.
+- [x] Inline hook with a lead-in line + trailing bullets keeps all lines.
+- [x] Inline hook containing a blank line keeps both paragraphs.
+- [x] Heading hook still extracts under `### Guidance [hook: ...]`.
+- [x] Hook line keeps its `[hook: ...]` tag in content.
 
 ### Phase 2 — output: blank lines & blank-line preservation
 
-- [ ] `printNext`/`printGates` emit blank lines for empty input lines.
-- [ ] `[ok]` status lines in new/init/start/done are followed by a blank line.
+- [x] `printNext`/`printGates` emit blank lines for empty input lines.
+- [x] `[ok]` status lines in new/init/start/done are followed by a blank line.
 
 #### Tests
 
-- [ ] Printed guidance renders blank lines between paragraphs.
-- [ ] Gate confirm (pre-hook) shows bullets under a lead-in line.
-- [ ] Status command output has a blank line after each `[ok]` block.
+- [x] Printed guidance renders blank lines between paragraphs.
+- [x] Gate confirm (pre-hook) shows bullets under a lead-in line.
+- [x] Status command output has a blank line after each `[ok]` block.
 
 ### Guidance [hook: post-enter]
 
