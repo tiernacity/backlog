@@ -18,6 +18,7 @@ import {
   defaultTemplateUrl,
   ensureDir,
   exists,
+  gitAdd,
   gitMv,
   isGitRepo,
   joinPath,
@@ -321,6 +322,12 @@ function moveWithAppend(
   }
   if (tpl !== null) {
     writeText(dst, appendTemplate(readText(dst), tpl));
+  }
+  // Stage the appended section alongside the rename so a single commit
+  // captures the whole transition (git mv always stages the pre-append
+  // content; re-staging dst keeps it all in one clean, stageable unit).
+  if (isGitRepo()) {
+    gitAdd(dst);
   }
   return dst;
 }

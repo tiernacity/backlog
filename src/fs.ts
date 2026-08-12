@@ -64,6 +64,11 @@ export function gitMv(src: string, dst: string): boolean {
   return r.success;
 }
 
+export function gitAdd(p: string): boolean {
+  const r = new Deno.Command("git", { args: ["add", p] }).outputSync();
+  return r.success;
+}
+
 export function plainMv(src: string, dst: string): void {
   Deno.renameSync(src, dst);
 }
