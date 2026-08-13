@@ -406,6 +406,11 @@ function moveWithAppend(
 ): string | null {
   const name = baseName(src);
   const dst = joinPath(dstDir, name);
+  if (!exists(dstDir)) {
+    err(`destination state dir is missing: ${dstDir}`);
+    err(`re-run \`backlog init\` to create it, then retry \`backlog ${cmd}\`.`);
+    return null;
+  }
   if (isGitRepo()) {
     if (!gitMv(src, dst)) {
       err(

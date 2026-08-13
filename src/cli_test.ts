@@ -144,3 +144,21 @@ Deno.test("later cannot park an in-progress item (hint)", () => {
   assertEquals(r.code, 1);
   assertEquals(exists(`${root}/backlog/in-progress/1-wip.md`), true);
 });
+
+Deno.test("later errors when the pre-maybe-later dir is missing until init", () => {
+  const root = prep();
+  cli(root, "init");
+  cli(root, "new", "upgrade", "-y");
+  // Simulate a pre-maybe-later repo: drop the dir entirely.
+  Deno.removeSync(`${root}/backlog/maybe-later`, { recursive: true });
+  const r = cli(root, "later", "1");
+  assertEquals(r.code, 1);
+  assertEquals(r.out.includes("backlog init"), true);
+  assertEquals(exists(`${root}/backlog/maybe-later/1-upgrade.md`), false);
+  assertEquals(exists(`${root}/backlog/todo/1-upgrade.md`), true);
+  // init repairs it, then later succeeds.
+  cli(root, "init");
+  const ok = cli(root, "later", "1");
+  assertEquals(ok.code, 0);
+  assertEquals(exists(`${root}/backlog/maybe-later/1-upgrade.md`), true);
+});
