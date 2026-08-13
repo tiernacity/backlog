@@ -33,9 +33,9 @@ Constraints:
 ### Uncertainties
 
 All three previously-open naming/ordering questions are resolved:
-- [x] Folder/prefix is `maybe-later`; commands are `later`/`now`.
-- [x] List order: in-progress, todo, maybe-later, done (done last).
-- [x] `--later` and `--done` are independent and cumulative.
+- [ ] Folder/prefix is `maybe-later`; commands are `later`/`now`.
+- [ ] List order: in-progress, todo, maybe-later, done (done last).
+- [ ] `--later` and `--done` are independent and cumulative.
 
 ### Notes and analysis
 
@@ -57,3 +57,80 @@ Fill out the Goal, Context, and Done When, then commit.
 [hook: pre-exit] This increment is _ready for in-progress_ only when the Done
 When criteria are complete and approved, and the file is committed. Commit the
 file before moving to in-progress.
+
+## Implementation Plan
+
+### Phase 1 — core state + init upgrade
+
+- [ ] Add `MAYBE_LATER` state constant to `core.ts`; extend `STATE_ORDER`.
+- [ ] Leave `TEMPLATE_NAME` without a `maybe-later` entry (no template).
+- [ ] `initCmd`: create `backlog/maybe-later/` +
+  `.gitkeep`, skip template seeding for it; existing state dirs/templates
+  untouched so upgrading an existing repo only adds the new dir.
+
+#### Tests
+
+- [ ] Unit: `MAYBE_LATER` present in `STATE_ORDER`.
+- [ ] Integration: fresh `init` creates `maybe-later/.gitkeep` and no
+  `.maybe-later.md`; re-run `init` on an existing/upgrade repo adds only the new dir
+  and leaves existing templates untouched.
+
+### Phase 2 — `later`/`now` commands
+
+- [ ] `laterCmd`: move `todo → maybe-later` with `moveWithAppend(..., null)` (no
+  template content appended).
+- [ ] `nowCmd`: move `maybe-later → todo` with `moveWithAppend(..., null)`.
+- [ ] Wire both into `run` dispatch; add `SUBHELP` entries.
+
+#### Tests
+
+- [ ] Integration: `later` moves a todo item and appends no content;
+  `now` moves it back and appends no content.
+- [ ] Unit: needle-count/content-equality assertions on the moved file.
+
+### Phase 3 — disallowed-transition errors
+
+- [ ] `start`/`done` on a `maybe-later` item: informative remedy error
+  (suggest `backlog now <id>`).
+- [ ] `done` from `todo` and any move out of `done`: informative remedy errors.
+- [ ] Review all transition pairs for clear remedy guidance.
+
+#### Tests
+
+- [ ] Integration: each disallowed transition exits non-zero and prints a
+  remedy hint; no file content is appended.
+
+### Phase 4 — `list` ordering + `--later`
+
+- [ ] `list` hides `maybe-later` by default; `--later` shows it.
+- [ ] Ordering: in-progress, todo, maybe-later, done (done always last).
+- [ ] `--later` and `--done` are independent and cumulative.
+
+#### Tests
+
+- [ ] Integration: default, `--later`, `--done`, and combined flag output
+  ordering.
+
+### Phase 5 — docs
+
+- [ ] Update `HELP`, `HOOKS` transition lines, `SUBHELP`, `--short` AGENTS.md
+  form.
+- [ ] Update `README.md` (layout, commands, templates) and `AGENTS.md`.
+
+#### Tests
+
+- [ ] `backlog help` / each `-h` output reflects the new category; run
+  `deno test` and the release build checks.
+
+### Guidance [hook: post-enter]
+
+Work on this increment MUST be done in a topic branch. If the branch does not already exist
+create it now. Commit the in-progress file to the branch.
+
+Populate the implementation plan and tests, and keep them up-to-date as implementation
+proceeds.
+
+[hook: pre-exit] This increment is _ready for done_ only when:
+
+- Done When criteria are met, and Test criteria are passing and demonstrated
+- Commit the file before moving to done.
