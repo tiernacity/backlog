@@ -6,8 +6,9 @@ use an installed release binary while developing here.
 
 Run `./backlog.sh help` **now** for the full, always-current workflow.
 
-Increments live under `backlog/` (todo → in-progress → done); the seeded state
-templates are `src/.todo.md`, `src/.in-progress.md`, `src/.done.md`.
+Increments live under `backlog/` (todo → in-progress → done, or park in
+maybe-later); the seeded state templates are `src/.todo.md`,
+`src/.in-progress.md`, `src/.done.md`. `maybe-later/` has no template.
 
 ## Dependencies vs hand-crafted code
 

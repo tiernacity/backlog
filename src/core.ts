@@ -1,13 +1,15 @@
 export const TODO = "todo";
 export const IN_PROGRESS = "in-progress";
 export const DONE = "done";
+export const MAYBE_LATER = "maybe-later";
 
-export const STATE_ORDER = [TODO, IN_PROGRESS, DONE] as const;
+export const STATE_ORDER = [TODO, IN_PROGRESS, DONE, MAYBE_LATER] as const;
 
 export const TEMPLATE_NAME: Record<string, string> = {
   [TODO]: ".todo.md",
   [IN_PROGRESS]: ".in-progress.md",
   [DONE]: ".done.md",
+  // MAYBE_LATER intentionally has no template.
 };
 
 export type HookName = "pre-enter" | "post-enter" | "pre-exit" | "post-exit";
