@@ -1,8 +1,8 @@
 # backlog
 
-A tiny, agent-friendly CLI that moves one **increment file** through three
-git-tracked states: `todo → in-progress → done`. Inspired by
-[this](https://blog.umans.ai/blog/how-we-ship-with-ai/).
+A tiny, agent-friendly CLI that moves one **increment file** through git-tracked
+states: `todo → in-progress → done` (optionally parking ideas in `maybe-later`).
+Inspired by [this](https://blog.umans.ai/blog/how-we-ship-with-ai/).
 
 ---
 
@@ -28,10 +28,14 @@ backlog/
   todo/           # idea → drafted increment
   in-progress/    # increment → working code
   done/           # code → verified
+  maybe-later/    # recorded, not started (hidden from `list` unless --later)
   .todo.md        # template applied on `new`
   .in-progress.md # template applied on `start`
   .done.md        # template applied on `done`
 ```
+
+`maybe-later/` has **no** template file: `later`/`now` move increments between
+todo and maybe-later without adding any content to the increment.
 
 Each increment is a single markdown file named `<id>-<slug>.md`:
 
@@ -44,8 +48,8 @@ backlog/todo/3-tmdb-integration.md
 - **Numbering:** numbers are globally unique and sequential. To count the next
   number `new` sorts all files across `backlog/*` descending and increments the
   highest.
-- **Looking up:** `start`/`done` match an increment by full filename, slug, or
-  number.
+- **Looking up:** `start`/`done`/`later`/`now` match an increment by full
+  filename, slug, or number.
 
 ---
 
@@ -60,6 +64,9 @@ Each state has a template under `backlog/`. `init` seeds defaults (see
 | `backlog/.todo.md`        | `new` → `todo/`          |
 | `backlog/.in-progress.md` | `start` → `in-progress/` |
 | `backlog/.done.md`        | `done` → `done/`         |
+
+`maybe-later/` has no template — `later` and `now` move files without applying
+any template, so parked items never gain transition content.
 
 `.todo.md` is a scaffold for the increment (title + Goal/Context/Done
 When/Uncertainties). Others templates **add sections**, so a task file grows as
@@ -103,13 +110,16 @@ supply the "what to do next" (post-hooks) and the gates (pre-hooks).
 
 ### `backlog init`
 
-Creates `todo/`, `in-progress/`, `done/` and seeds the three templates if
-missing. Idempotent.
+Creates `todo/`, `in-progress/`, `done/`, `maybe-later/` (dir-only, with a
+`.gitkeep`, no template) and seeds the three templates if missing. Idempotent:
+re-running init on an existing repo only adds the `maybe-later/` dir and leaves
+existing state dirs and templates untouched.
 
 ### `backlog new <name>`
 
 Drafts an increment into `todo/` from `.todo.md`, auto-numbered next, named from
-the slugified `<name>`. Fires `todo` enter hooks.
+the slugified `<name>`. Fires `todo` enter hooks. New increments always land in
+`todo/`.
 
 ### `backlog start [<id-or-name>]`
 
@@ -124,13 +134,31 @@ a git repo. Fires `in-progress` exit hooks, then `done` enter hooks.
 `<id-or-name>` is optional — implied when it's the only item in the source
 directory.
 
-### `backlog list [--done] [--grep <regex>]`
+### `backlog later [<id-or-name>]` and `backlog now [<id-or-name>]`
+
+`later` parks a `todo/` increment in `maybe-later/` (recorded, not started);
+`now` returns it to `todo/`. Both use `git mv` but apply **no template**, so
+parked increments never gain transition content.
+
+**Disallowed transitions.** Some moves are intentionally blocked, with an
+informative remedy in the error:
+
+- `start`/`done` on a `maybe-later/` item → return it with `backlog now <id>`
+  first.
+- `done` straight from `todo/` → `backlog start <id>` first.
+- any move out of `done/` → terminal.
+
+These are blocked because transitions add template content to the increment
+file, which would otherwise accumulate without bound.
+
+### `backlog list [--later] [--done] [--grep <regex>]`
 
 Lists increments one per line as `state/<filename>`, sorted by ascending id. By
-default shows `in-progress/` then `todo/`. `--done` appends every increment from
-`done/`, also ascending (there is no `--all` flag — `--done` already lists
-everything). `--grep <regex>` filters by an increment's filename (slug) or its
-file contents.
+default shows `in-progress/` then `todo/`. `--later` appends every increment
+from `maybe-later/` (hidden by default); `--done` appends every increment from
+`done/` last. There is no `--all` flag — combining `--later` and `--done` lists
+everything as `in-progress, todo, maybe-later, done`. `--grep <regex>` filters
+by an increment's filename (slug) or its file contents.
 
 ### `backlog help [--short]`
 
@@ -142,8 +170,9 @@ end with a pointer to the GitHub releases page.
 
 ## Git policy
 
-`backlog` never commits. Its only git operation is `git mv` for `start`/`done`,
-to preserve file history, and only inside a git repo.
+`backlog` never commits. Its only git operation is `git mv` for
+`start`/`done`/`later`/`now`, to preserve file history, and only inside a git
+repo.
 
 ---
 
@@ -168,7 +197,10 @@ $ backlog new content-api                    # draft → todo/
 $ backlog start content-api                  # todo → in-progress/
    … build, test, fill the implementation plan …
 $ backlog done content-api                   # in-progress → done/
+   … or park it instead of starting it …
+$ backlog later some-idea                     # todo → maybe-later/
+$ backlog now some-idea                       # maybe-later → todo/
 ```
 
-One file, three directories, full history via `git mv`, visible to any human or
+One file, four directories, full history via `git mv`, visible to any human or
 agent that reads the repo.

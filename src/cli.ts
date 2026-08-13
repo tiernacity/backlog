@@ -7,9 +7,11 @@ import {
   idFromFile,
   IN_PROGRESS,
   matches,
+  MAYBE_LATER,
   nextId,
   slugify,
   sortByIdAsc,
+  STATE_ORDER,
   TODO,
 } from "./core.ts";
 import {
@@ -56,6 +58,7 @@ const STORE_IGNORED = ".lock\n";
 
 const HEADLINE =
   `Use \`backlog\` for task workflow support. Manage an increment from todo → in-progress → done
+(optionally parking ideas in maybe-later)
 
 ${INSTALL}`;
 
@@ -66,7 +69,9 @@ USAGE
   backlog new <name>
   backlog start [-y] [<id-or-name>]
   backlog done [-y] [<id-or-name>]
-  backlog list [--done] [--grep <regex>]
+  backlog later [<id-or-name>]
+  backlog now [<id-or-name>]
+  backlog list [--later] [--done] [--grep <regex>]
   backlog help [--short]
   backlog --version
 
@@ -87,6 +92,18 @@ WORKFLOW
   )
 } (git mv, verified)
 
+PARK (optional)
+  backlog later <id-or-name>   → todo → ${
+  STORE_DIR(
+    MAYBE_LATER,
+  )
+} (recorded, not started)
+  backlog now <id-or-name>     → ${
+  STORE_DIR(
+    MAYBE_LATER,
+  )
+} → todo
+
 Commits are yours — backlog only moves files.
 Hooks on *templates* gate each move; but are useful context in increment files, so don't remove them.
 Don't swallow backlog stdout — it carries workflow guidance for humans and agents.`;
@@ -105,7 +122,13 @@ Transition order:
   new  → todo enter hooks
   start → todo exit, then in-progress enter
   done → in-progress exit, then done enter (done is terminal)
+  later → todo exit; no template content is added (maybe-later has no template)
+  now → maybe-later exit; no template content is added
 Default templates show each; add/sharpen them in backlog/.*.md to shape your workflow.
+
+Transitions add template content to the increment file. "done", and moves out of
+done (terminal), "done" straight from todo, and "start"/"done" on a
+maybe-later item, are all disallowed so content never accumulates.
 See also: backlog help (workflow), backlog init (setup & template customisation).`;
 
 const out = (s: string): void => {
@@ -199,7 +222,9 @@ async function readLine(): Promise<string> {
 function initCmd(): number {
   const root = backlogRoot();
   ensureDir(root);
-  for (const state of [TODO, IN_PROGRESS, DONE]) {
+  // MAYBE_LATER is a dir-only state (no template), so it joins the dir pass
+  // but not the template pass below.
+  for (const state of STATE_ORDER) {
     ensureDir(joinPath(root, state));
     okLine(`created ${STORE_DIR(state)}`);
     const gk = STORE_GITKEEP(state);
@@ -224,7 +249,7 @@ function initCmd(): number {
   writeText(gitignorePath, STORE_IGNORED);
   okLine(`wrote ${STORE_GITIGNORE} (ignores runtime files)`);
   out(
-    `${STORE}/ now holds your workflow — three templates and three state dirs`,
+    `${STORE}/ now holds your workflow — three templates and four state dirs`,
   );
   out('resolve every "WORKFLOW" marker in the templates now (one-time policy)');
   out(
@@ -327,6 +352,52 @@ function resolveOne(
   return files[0];
 }
 
+// Per-command hints for when a targeted increment lives in a state other than
+// the command's source — making the transition disallowed — so the error tells
+// the user where it is and how to proceed.
+const OTHER_HINTS: Record<string, (q: string, state: string) => string> = {
+  start: (q, s) =>
+    s === MAYBE_LATER
+      ? `\`${q}\` is parked in maybe-later/; run \`backlog now ${q}\` to return it to todo, then \`backlog start ${q}\``
+      : s === DONE
+      ? `\`${q}\` is already done/ (terminal)`
+      : `\`${q}\` is already in-progress/`,
+  done: (q, s) =>
+    s === TODO
+      ? `\`${q}\` is in todo/; run \`backlog start ${q}\` first`
+      : s === MAYBE_LATER
+      ? `\`${q}\` is parked in maybe-later/; run \`backlog now ${q}\` → \`backlog start ${q}\` → \`backlog done ${q}\``
+      : `\`${q}\` is already done/ (terminal)`,
+  later: (q, s) =>
+    s === MAYBE_LATER
+      ? `\`${q}\` is already parked in maybe-later/`
+      : s === DONE
+      ? `\`${q}\` is already done/ (terminal)`
+      : `\`${q}\` is in-progress/, not todo; it cannot be parked`,
+  now: (q, s) =>
+    s === TODO
+      ? `\`${q}\` is already in todo/`
+      : `\`${q}\` is not in maybe-later/`,
+};
+
+// When a selected increment isn't in the command's source state, search the
+// whole backlog for it and, if it lives elsewhere, print the informative hint.
+function hintIfElsewhere(
+  cmd: string,
+  query: string | undefined,
+  from: string,
+): void {
+  if (query === undefined || !OTHER_HINTS[cmd]) return;
+  const root = backlogRoot();
+  for (const item of listFiles(root).filter((f) => idFromFile(f) !== null)) {
+    if (item.startsWith(`${joinPath(root, from)}/`)) continue;
+    if (!matches(item, query)) continue;
+    const state = item.slice(root.length + 1).split("/")[0];
+    err(OTHER_HINTS[cmd](query, state));
+    return;
+  }
+}
+
 function moveWithAppend(
   src: string,
   dstDir: string,
@@ -335,6 +406,11 @@ function moveWithAppend(
 ): string | null {
   const name = baseName(src);
   const dst = joinPath(dstDir, name);
+  if (!exists(dstDir)) {
+    err(`destination state dir is missing: ${dstDir}`);
+    err(`re-run \`backlog init\` to create it, then retry \`backlog ${cmd}\`.`);
+    return null;
+  }
   if (isGitRepo()) {
     if (!gitMv(src, dst)) {
       err(
@@ -373,7 +449,10 @@ function startCmd(args: string[]): Promise<number> {
   const srcDir = joinPath(root, TODO);
   const files = listFiles(srcDir).sort();
   const item = resolveOne(files, flags.query, "todo");
-  if (!item) return Promise.resolve(1);
+  if (!item) {
+    hintIfElsewhere("start", flags.query, TODO);
+    return Promise.resolve(1);
+  }
   const todoTpl = readOptional(joinPath(root, ".todo.md"));
   const ipTpl = readOptional(joinPath(root, ".in-progress.md"));
   const gates = [
@@ -398,6 +477,41 @@ function startCmd(args: string[]): Promise<number> {
   });
 }
 
+// Moving a file between two dirs with no template. Used by `later`/`now`.
+function neutralMoveCmd(
+  args: string[],
+  from: string,
+  to: string,
+  label: string,
+  cmd: string,
+): Promise<number> {
+  const flags = parseSelect(args);
+  if (flags.error) {
+    err(flags.error);
+    return Promise.resolve(1);
+  }
+  const root = backlogRoot();
+  const srcDir = joinPath(root, from);
+  const files = listFiles(srcDir).sort();
+  const item = resolveOne(files, flags.query, label);
+  if (!item) {
+    hintIfElsewhere(cmd, flags.query, from);
+    return Promise.resolve(1);
+  }
+  const moved = moveWithAppend(item, joinPath(root, to), null, cmd);
+  if (!moved) return Promise.resolve(1);
+  okLine(`moved ${baseName(item)}: ${from} → ${to}`);
+  return Promise.resolve(0);
+}
+
+function laterCmd(args: string[]): Promise<number> {
+  return neutralMoveCmd(args, TODO, MAYBE_LATER, "todo", "later");
+}
+
+function nowCmd(args: string[]): Promise<number> {
+  return neutralMoveCmd(args, MAYBE_LATER, TODO, "maybe-later", "now");
+}
+
 function doneCmd(args: string[]): Promise<number> {
   const flags = parseSelect(args);
   if (flags.error) {
@@ -408,7 +522,10 @@ function doneCmd(args: string[]): Promise<number> {
   const srcDir = joinPath(root, IN_PROGRESS);
   const files = listFiles(srcDir).sort();
   const item = resolveOne(files, flags.query, "in-progress");
-  if (!item) return Promise.resolve(1);
+  if (!item) {
+    hintIfElsewhere("done", flags.query, IN_PROGRESS);
+    return Promise.resolve(1);
+  }
   const ipTpl = readOptional(joinPath(root, ".in-progress.md"));
   const doneTpl = readOptional(joinPath(root, ".done.md"));
   const gates = [
@@ -452,10 +569,12 @@ function parseSelect(args: string[]): {
 
 function listCmd(args: string[]): number {
   let showDone = false;
+  let showLater = false;
   let grep: RegExp | null = null;
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (a === "--done") showDone = true;
+    else if (a === "--later") showLater = true;
     else if (a === "--grep") {
       grep = parseGrep(args[i + 1]);
       if (!grep) return 1;
@@ -487,6 +606,13 @@ function listCmd(args: string[]): number {
   const todo = sortByIdAsc(listFiles(joinPath(root, TODO)).filter(filter));
   show(IN_PROGRESS, inProgress);
   show(TODO, todo);
+  if (showLater) {
+    show(
+      MAYBE_LATER,
+      sortByIdAsc(listFiles(joinPath(root, MAYBE_LATER)).filter(filter)),
+    );
+  }
+  // done always renders last.
   if (showDone) {
     show(DONE, sortByIdAsc(listFiles(joinPath(root, DONE)).filter(filter)));
   }
@@ -527,12 +653,13 @@ const SUBHELP: Record<string, string> = {
     STORE_DIR(
       DONE,
     )
-  } and seeds
-  the three project template files (${STORE_TEMPLATE(TODO)},
+  } and ${STORE_DIR(MAYBE_LATER)} (dir-only with a .gitkeep; no template file)
+  and seeds the three project template files (${STORE_TEMPLATE(TODO)},
   ${STORE_TEMPLATE(IN_PROGRESS)}, ${STORE_TEMPLATE(DONE)}). Idempotent: existing
-  template files are left unchanged. After seeding, resolve the \"WORKFLOW\"
-  markers in each template (one-time policy decisions) and shape your hooks;
-  \"backlog help\" documents hook names & semantics.`,
+  template files and state dirs are left unchanged, so re-running init on an
+  existing repo only adds the maybe-later dir. After seeding, resolve the
+  \"WORKFLOW\" markers in each template (one-time policy decisions) and shape
+  your hooks; \"backlog help\" documents hook names & semantics.`,
   new: `backlog new <name> [-y]
   Drafts a numbered increment in ${STORE_DIR(TODO)}. The name is slugified
   (lowercase, kebab-case) and prefixed with the next sequential number
@@ -555,12 +682,23 @@ const SUBHELP: Record<string, string> = {
       DONE,
     )
   }, and moves the file. done is terminal: its
-  exit hooks never fire.`,
-  list: `backlog list [--done] [--grep <regex>]
-  Shows in-progress, then todo, each sorted by ascending numeric id. --done
-  appends every done increment (also ascending; there is no --all flag —
-  --done already lists everything). --grep filters each increment by a
-  regular expression matching its filename (slug) or file contents.`,
+  exit hooks never fire. A todo item cannot be done directly, and a
+  maybe-later item cannot be started or done; those error with a remedy hint.`,
+  later: `backlog later [<id-or-name>]
+  Parks a todo increment in maybe-later/ (recorded, not started). Like
+  start/done it git-mvs the file, but no template is applied — maybe-later
+  has no template — so no content is added to the increment. Use
+  \`backlog now\` to return it to todo.`,
+  now: `backlog now [<id-or-name>]
+  Returns a maybe-later increment to todo/. No template is applied, so no
+  content is added to the increment.`,
+  list: `backlog list [--later] [--done] [--grep <regex>]
+  Shows in-progress, then todo, each sorted by ascending numeric id. --later
+  appends every maybe-later increment (hidden by default). --done appends
+  every done increment last (also ascending; there is no --all flag —
+  combining --later and --done lists everything as in-progress, todo,
+  maybe-later, done). --grep filters each increment by a regular expression
+  matching its filename (slug) or file contents.`,
   help: `backlog help [--short]
   Prints workflow + usage. --short adds \"run backlog help now\".`,
   "--version": `backlog --version
@@ -592,6 +730,10 @@ export async function run(argv: string[]): Promise<number> {
       return await startCmd(rest);
     case "done":
       return await doneCmd(rest);
+    case "later":
+      return await laterCmd(rest);
+    case "now":
+      return await nowCmd(rest);
     case "list":
       return listCmd(rest);
     case "help":
