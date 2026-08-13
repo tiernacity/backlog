@@ -20,22 +20,22 @@ Constraints:
 
 ### Done When
 
-- [ ] `backlog init` creates `backlog/maybe-later/` with a `.gitkeep`, does not create any `.maybe-later.md` template, and safely upgrades an existing backlog-enabled repo (idempotent, existing state/templates untouched).
-- [ ] `backlog later <id-or-name>` moves a `todo` item into `maybe-later/` without appending template content.
-- [ ] `backlog now <id-or-name>` moves a `maybe-later` item back into `todo/` without appending template content.
-- [ ] Disallowed transitions give informative remedy errors: `start`/`done` a `maybe-later` item (`now` to revive), `done` a fresh-`todo` item (`start` first), any move out of `done` (terminal). No template content is ever added by these disallowed paths.
-- [ ] `backlog list` does not show `maybe-later/` items by default; `--later` shows them.
-- [ ] List ordering with flags: by default `in-progress`, `todo`; with `--later` adds `maybe-later`; any `--done` entries appear **last** (order: in-progress, todo, maybe-later, done). `--later` and `--done` are independent and cumulative.
-- [ ] Help output and subcommand help updated; `backlog help` (AGENTS.md-oriented short form) updated.
-- [ ] Unit and integration tests cover the new state, transitions, upgrade, and error messaging.
-- [ ] README and AGENTS.md updated for the new category.
+- [x] `backlog init` creates `backlog/maybe-later/` with a `.gitkeep`, does not create any `.maybe-later.md` template, and safely upgrades an existing backlog-enabled repo (idempotent, existing state/templates untouched).
+- [x] `backlog later <id-or-name>` moves a `todo` item into `maybe-later/` without appending template content.
+- [x] `backlog now <id-or-name>` moves a `maybe-later` item back into `todo/` without appending template content.
+- [x] Disallowed transitions give informative remedy errors: `start`/`done` a `maybe-later` item (`now` to revive), `done` a fresh-`todo` item (`start` first), any move out of `done` (terminal). No template content is ever added by these disallowed paths.
+- [x] `backlog list` does not show `maybe-later/` items by default; `--later` shows them.
+- [x] List ordering with flags: by default `in-progress`, `todo`; with `--later` adds `maybe-later`; any `--done` entries appear **last** (order: in-progress, todo, maybe-later, done). `--later` and `--done` are independent and cumulative.
+- [x] Help output and subcommand help updated; `backlog help` (AGENTS.md-oriented short form) updated.
+- [x] Unit and integration tests cover the new state, transitions, upgrade, and error messaging.
+- [x] README and AGENTS.md updated for the new category.
 
 ### Uncertainties
 
 All three previously-open naming/ordering questions are resolved:
-- [ ] Folder/prefix is `maybe-later`; commands are `later`/`now`.
-- [ ] List order: in-progress, todo, maybe-later, done (done last).
-- [ ] `--later` and `--done` are independent and cumulative.
+- [x] Folder/prefix is `maybe-later`; commands are `later`/`now`.
+- [x] List order: in-progress, todo, maybe-later, done (done last).
+- [x] `--later` and `--done` are independent and cumulative.
 
 ### Notes and analysis
 
@@ -62,64 +62,64 @@ file before moving to in-progress.
 
 ### Phase 1 — core state + init upgrade
 
-- [ ] Add `MAYBE_LATER` state constant to `core.ts`; extend `STATE_ORDER`.
-- [ ] Leave `TEMPLATE_NAME` without a `maybe-later` entry (no template).
-- [ ] `initCmd`: create `backlog/maybe-later/` +
+- [x] Add `MAYBE_LATER` state constant to `core.ts`; extend `STATE_ORDER`.
+- [x] Leave `TEMPLATE_NAME` without a `maybe-later` entry (no template).
+- [x] `initCmd`: create `backlog/maybe-later/` +
   `.gitkeep`, skip template seeding for it; existing state dirs/templates
   untouched so upgrading an existing repo only adds the new dir.
 
 #### Tests
 
-- [ ] Unit: `MAYBE_LATER` present in `STATE_ORDER`.
-- [ ] Integration: fresh `init` creates `maybe-later/.gitkeep` and no
+- [x] Unit: `MAYBE_LATER` present in `STATE_ORDER`.
+- [x] Integration: fresh `init` creates `maybe-later/.gitkeep` and no
   `.maybe-later.md`; re-run `init` on an existing/upgrade repo adds only the new dir
   and leaves existing templates untouched.
 
 ### Phase 2 — `later`/`now` commands
 
-- [ ] `laterCmd`: move `todo → maybe-later` with `moveWithAppend(..., null)` (no
+- [x] `laterCmd`: move `todo → maybe-later` with `moveWithAppend(..., null)` (no
   template content appended).
-- [ ] `nowCmd`: move `maybe-later → todo` with `moveWithAppend(..., null)`.
-- [ ] Wire both into `run` dispatch; add `SUBHELP` entries.
+- [x] `nowCmd`: move `maybe-later → todo` with `moveWithAppend(..., null)`.
+- [x] Wire both into `run` dispatch; add `SUBHELP` entries.
 
 #### Tests
 
-- [ ] Integration: `later` moves a todo item and appends no content;
+- [x] Integration: `later` moves a todo item and appends no content;
   `now` moves it back and appends no content.
-- [ ] Unit: needle-count/content-equality assertions on the moved file.
+- [x] Unit: needle-count/content-equality assertions on the moved file.
 
 ### Phase 3 — disallowed-transition errors
 
-- [ ] `start`/`done` on a `maybe-later` item: informative remedy error
+- [x] `start`/`done` on a `maybe-later` item: informative remedy error
   (suggest `backlog now <id>`).
-- [ ] `done` from `todo` and any move out of `done`: informative remedy errors.
-- [ ] Review all transition pairs for clear remedy guidance.
+- [x] `done` from `todo` and any move out of `done`: informative remedy errors.
+- [x] Review all transition pairs for clear remedy guidance.
 
 #### Tests
 
-- [ ] Integration: each disallowed transition exits non-zero and prints a
+- [x] Integration: each disallowed transition exits non-zero and prints a
   remedy hint; no file content is appended.
 
 ### Phase 4 — `list` ordering + `--later`
 
-- [ ] `list` hides `maybe-later` by default; `--later` shows it.
-- [ ] Ordering: in-progress, todo, maybe-later, done (done always last).
-- [ ] `--later` and `--done` are independent and cumulative.
+- [x] `list` hides `maybe-later` by default; `--later` shows it.
+- [x] Ordering: in-progress, todo, maybe-later, done (done always last).
+- [x] `--later` and `--done` are independent and cumulative.
 
 #### Tests
 
-- [ ] Integration: default, `--later`, `--done`, and combined flag output
+- [x] Integration: default, `--later`, `--done`, and combined flag output
   ordering.
 
 ### Phase 5 — docs
 
-- [ ] Update `HELP`, `HOOKS` transition lines, `SUBHELP`, `--short` AGENTS.md
+- [x] Update `HELP`, `HOOKS` transition lines, `SUBHELP`, `--short` AGENTS.md
   form.
-- [ ] Update `README.md` (layout, commands, templates) and `AGENTS.md`.
+- [x] Update `README.md` (layout, commands, templates) and `AGENTS.md`.
 
 #### Tests
 
-- [ ] `backlog help` / each `-h` output reflects the new category; run
+- [x] `backlog help` / each `-h` output reflects the new category; run
   `deno test` and the release build checks.
 
 ### Guidance [hook: post-enter]
