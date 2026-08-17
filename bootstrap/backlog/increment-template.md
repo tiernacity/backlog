@@ -2,41 +2,42 @@
 
 ---
 
-!!! This is a self-describing backlog increment, and contains
-!!! information about both the workflow and the increment.
-!!!
-!!! Blocks of lines that begin `!!!` like this one, have instructions about the _workflow_.
-!!! Some instruction blocks may be deleted once fulfilled. Act as instructed
+This is a self-describing backlog increment, and contains information about
+both the workflow and the increment.
 
-!!! Instruction: workflow
-!!! Increments can move between these states:
-!!! maybe-later <-> todo -> in-progress -> done
-!!!
-!!! `backlog/` has a sub-directory for each state:
-!!! - You MUST transition an increment between states by moving the file
-!!! - You MUST then act on lifecycle instructions in the file
-!!! - You SHOULD prefer history-preserving commands such as `git mv`
-!!! - You SHOULD then commit the file
+Blockquotes that begin `> Instruction: ` have instructions about the _workflow_.
+Some instruction blocks may be deleted once fulfilled. Act as instructed.
 
-!!! Instruction: new increments
-!!!
-!!! To instantiate a new increment, copy this template file into `backlog/todo`
-!!! or `backlog/maybe-later`. The filename MUST conform to `<code>-<descriptive-slug>.md`,
-!!!
-!!! where `<code>` has been generated using `od -An -N3 -tx1 /dev/urandom | tr -d ' \n'`.
-!!! Example `backlog/todo/4c9f2a-add-auth-export.md`.
-!!!
-!!! You MAY delete this block, after creating the new file
+> Instruction: workflow
+>
+> Increments can move between these states:
+> `maybe-later <-> todo -> in-progress -> done`
+>
+> `backlog/` has a sub-directory for each state:
+> - You MUST transition an increment between states by moving the file
+> - You MUST then act on lifecycle instructions in the file
+> - You SHOULD prefer history-preserving commands such as `git mv`
+> - You SHOULD then commit the file
+
+> Instruction: new increments
+>
+> To instantiate a new increment, copy this template file into `backlog/todo` or
+> `backlog/maybe-later`. The filename MUST conform to `<code>-<descriptive-slug>.md`,
+> where `<code>` MUST be generated using `od -An -N3 -tx1 /dev/urandom | tr -d ' \n'`
+>
+> Example `backlog/todo/4c9f2a-add-auth-export.md`
+>
+> You MAY delete this block, after creating the new file
 
 ---
 
-!!! Instruction: on entry to `todo` or `maybe-later`
-!!!
-!!! you are scoping and analysing the increment:
-!!! - you MUST set the increment title at the top of the file
-!!! - you MUST complete all the sub-sections under "Scope"
-!!! - you SHOULD NOT complete "Implementation Plan", unless instructed to do so
-!!! - IF the increment is `maybe-later`, you MAY leave a partially-complete "Scope" section
+> Instruction: on entry to `todo` or `maybe-later`
+>
+> You are scoping and analysing the increment:
+> - You MUST set the increment title at the top of the file
+> - You MUST complete all the sub-sections under "Scope"
+> - You SHOULD NOT complete "Implementation Plan", unless instructed to do so
+> - IF the increment is `maybe-later`, you MAY leave a partially-complete "Scope" section
 
 ## Scope
 
@@ -62,20 +63,20 @@ TODO: Anything useful for the future implementation phase.
 
 ---
 
-!!! Instruction: on entry to `in-progress`
-!!!
-!!! You are designing, planning and then implementing the increment:
-!!! - You MUST get approval of "Done When" criteria (above) BEFORE moving to `in-progress`
-!!! - You MUST capture an "Implementation Plan" in the sub-sections below, in detail
-!!! - You SHOULD record enough context that implementation can proceed in multiple sessions
-!!! - You MAY plan multiple phases. Add sections as required
-!!! - You MUST NOT complete the "Increment Close" section
+> Instruction: on entry to `in-progress`
+>
+> You are designing, planning and then implementing the increment:
+> - You MUST get approval of "Done When" criteria (above) BEFORE moving to `in-progress`
+> - You MUST capture an "Implementation Plan" in the sub-sections below, in detail
+> - You SHOULD record enough context that implementation can proceed in multiple sessions
+> - You MAY plan multiple phases. Add sections as required
+> - You MUST NOT complete the "Increment Close" section
 
 ## Implementation Plan
 
 ### Phase 1
 
-- [ ] TODO: implementations steps and detailed designs
+- [ ] TODO: implementation steps and detailed designs
 
 ### Tests
 
@@ -84,14 +85,14 @@ TODO: Anything useful for the future implementation phase.
 
 ---
 
-!!! Instruction: on entry to `done`
-!!!
-!!! You are closing the increment:
-!!! - You MUST get approval BEFORE moving to `done`
-!!! - You MUST ensure "Done When" criteria are met BEFORE moving to `done`
-!!! - You MUST ensure "Tests" are passing and verified BEFORE moving to `done`
-!!! - You MUST then complete all the sub-sections under "Increment Close"
-!!! - Once complete, summarise the opportunities for improvement from "Reflection"
+> Instruction: on entry to `done`
+>
+> You are closing the increment:
+> - You MUST get approval BEFORE moving to `done`
+> - You MUST ensure "Done When" criteria are met BEFORE moving to `done`
+> - You MUST ensure "Tests" are passing and verified BEFORE moving to `done`
+> - You MUST then complete all the sub-sections under "Increment Close"
+> - Once complete, summarise the opportunities for improvement from "Reflection"
 
 ## Increment Close
 
